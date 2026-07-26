@@ -11,7 +11,8 @@
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx scripts/migrate.ts"
+    "db:migrate": "tsx scripts/migrate.ts",
+    "seed": "tsx scripts/seed-movie.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
