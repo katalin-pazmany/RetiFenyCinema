@@ -9,12 +9,12 @@ const fixture: TmdbMovieResponse = {
   runtime: 148,
   credits: {
     cast: [
-      { name: 'Leonardo DiCaprio', order: 0 },
-      { name: 'Joseph Gordon-Levitt', order: 1 },
-      { name: 'Elliot Page', order: 2 },
       { name: 'Tom Hardy', order: 3 },
+      { name: 'Leonardo DiCaprio', order: 0 },
       { name: 'Ken Watanabe', order: 4 },
+      { name: 'Joseph Gordon-Levitt', order: 1 },
       { name: 'Cillian Murphy', order: 5 },
+      { name: 'Elliot Page', order: 2 },
     ],
     crew: [
       { name: 'Christopher Nolan', job: 'Director' },
