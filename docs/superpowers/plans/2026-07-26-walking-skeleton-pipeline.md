@@ -1924,7 +1924,7 @@ git commit -m "ci: auto-deploy to staging on merge to main"
 
 **Interfaces:**
 - Consumes: `npm run db:migrate` (Task 3)
-- Requires secrets: `VERCEL_TOKEN`, `PRODUCTION_DATABASE_URL`.
+- Requires secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `PRODUCTION_DATABASE_URL`.
 
 - [ ] **Step 1: Write the workflow**
 
@@ -2242,7 +2242,7 @@ secrets):
 | Secret | Used by | Purpose |
 |---|---|---|
 | `VERCEL_TOKEN` | pr.yml, main.yml, promote.yml | Deploys and promotes via the Vercel CLI |
-| `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | pr.yml, main.yml | Non-interactive `vercel pull` |
+| `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | pr.yml, main.yml, promote.yml | Non-interactive project linking for `vercel pull`/`build`/`deploy`/`promote` |
 | `NEON_API_KEY`, `NEON_PROJECT_ID` | pr.yml, pr-cleanup.yml | Creates/deletes the ephemeral per-PR database branch |
 | `TMDB_API_KEY`, `OMDB_API_KEY` | pr.yml | Movie metadata for the PR preview deployment |
 | `STAGING_DATABASE_URL`, `STAGING_DOMAIN` | main.yml | Migrates and aliases the staging deployment |
