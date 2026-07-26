@@ -6,7 +6,9 @@
 
 **Architecture:** Next.js (App Router, TypeScript) on Vercel, reading from a Postgres database (Neon) via Drizzle ORM. Movie metadata (synopsis, poster, director, cast, trailer, IMDb ID) is fetched from TMDB and the IMDb rating from OMDb, both via a versioned seed script — there is no admin UI in this sub-project. GitHub Actions runs lint/typecheck/tests on every PR, deploys an ephemeral preview per PR (backed by its own ephemeral Neon branch) for Playwright E2E testing, auto-promotes tested code to a staging environment on merge to `main`, and promotes staging to production only via an explicit manual workflow. Terraform declares the Vercel project and the Neon project/branches.
 
-**Tech Stack:** Next.js 15 (App Router, TypeScript), Drizzle ORM, `@neondatabase/serverless`, Vitest, Playwright, GitHub Actions, Vercel CLI, Terraform (`vercel` and `kislerdm/neon` providers), TMDB API, OMDb API.
+**Tech Stack:** Next.js 15 (App Router, TypeScript), Drizzle ORM, `postgres` (postgres-js) + `drizzle-orm/postgres-js`, Vitest, Playwright, GitHub Actions, Vercel CLI, Terraform (`vercel` and `kislerdm/neon` providers), TMDB API, OMDb API.
+
+**Driver note (resolved during Task 3):** The original plan specified `@neondatabase/serverless` + `drizzle-orm/neon-http`. That driver only speaks Neon's HTTPS proxy protocol and cannot reach a plain local/CI Postgres container — discovered while implementing Task 3. Resolved by switching to `postgres` (postgres-js) + `drizzle-orm/postgres-js` everywhere (local, CI, staging, production) — one driver, one code path in every environment; Neon connection strings work fine over standard TCP/SSL. All task text below reflects this driver.
 
 ## Global Constraints
 
@@ -232,7 +234,7 @@ git commit -m "ci: add PR pipeline skeleton (lint, typecheck, unit tests)"
 - [ ] **Step 1: Install DB dependencies**
 
 ```bash
-npm install drizzle-orm @neondatabase/serverless
+npm install drizzle-orm postgres
 npm install -D drizzle-kit tsx
 ```
 
@@ -318,13 +320,13 @@ export const showtimes = pgTable('showtimes', {
 Create `lib/db/client.ts`:
 
 ```ts
-import { drizzle } from 'drizzle-orm/neon-http';
-import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 import * as schema from './schema';
 
 export function createDb(connectionString: string) {
-  const sql = neon(connectionString);
-  return drizzle(sql, { schema });
+  const client = postgres(connectionString);
+  return drizzle(client, { schema });
 }
 
 export const db = createDb(process.env.DATABASE_URL!);
@@ -359,9 +361,9 @@ Add to `package.json` `"scripts"`:
 Create `scripts/migrate.ts`:
 
 ```ts
-import { drizzle } from 'drizzle-orm/neon-http';
-import { neon } from '@neondatabase/serverless';
-import { migrate } from 'drizzle-orm/neon-http/migrator';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import postgres from 'postgres';
 
 async function main() {
   const connectionString = process.argv[2] ?? process.env.DATABASE_URL;
@@ -369,9 +371,10 @@ async function main() {
     console.error('Usage: npx tsx scripts/migrate.ts [connectionString]  (or set DATABASE_URL)');
     process.exit(1);
   }
-  const sql = neon(connectionString);
-  const db = drizzle(sql);
+  const client = postgres(connectionString, { max: 1 });
+  const db = drizzle(client);
   await migrate(db, { migrationsFolder: './drizzle' });
+  await client.end();
   console.log('Migrations applied');
 }
 
