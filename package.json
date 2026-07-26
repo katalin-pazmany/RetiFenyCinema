@@ -2,6 +2,7 @@
   "name": "walking-skeleton-pipeline",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,9 +11,11 @@
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
+    "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
-    "seed": "tsx scripts/seed-movie.ts"
+    "seed": "tsx scripts/seed-movie.ts",
+    "seed:fixture": "tsx scripts/seed-fixture.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
@@ -22,6 +25,7 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
