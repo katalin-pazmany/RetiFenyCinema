@@ -387,7 +387,7 @@ main().catch((err) => {
 - [ ] **Step 9: Generate and apply the initial migration to both local databases**
 
 ```bash
-source .env.local
+set -a; source .env.local; set +a
 npm run db:generate
 npm run db:migrate -- "$DATABASE_URL"
 npm run db:migrate -- "$TEST_DATABASE_URL"
@@ -1620,7 +1620,7 @@ test.describe('browsing movies', () => {
 - [ ] **Step 5: Run the E2E test locally**
 
 ```bash
-source .env.local
+set -a; source .env.local; set +a
 npm run test:e2e -- tests/e2e/browse-movies.spec.ts
 ```
 
@@ -1671,7 +1671,7 @@ test.describe('showtimes page', () => {
 - [ ] **Step 2: Run the E2E test locally**
 
 ```bash
-source .env.local
+set -a; source .env.local; set +a
 npm run test:e2e -- tests/e2e/showtimes.spec.ts
 ```
 
@@ -1729,7 +1729,7 @@ test.describe('movie detail page', () => {
 - [ ] **Step 2: Run the E2E test locally**
 
 ```bash
-source .env.local
+set -a; source .env.local; set +a
 npm run test:e2e -- tests/e2e/movie-detail.spec.ts
 ```
 
@@ -2199,7 +2199,7 @@ Prerequisites: Node 20+, Docker.
 npm install
 docker compose up -d db
 cp .env.example .env.local   # fill in TMDB_API_KEY and OMDB_API_KEY
-source .env.local
+set -a; source .env.local; set +a
 npm run db:generate          # only needed after changing lib/db/schema.ts
 npm run db:migrate -- "$DATABASE_URL"
 npm run db:migrate -- "$TEST_DATABASE_URL"
