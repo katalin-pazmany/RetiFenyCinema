@@ -19,10 +19,32 @@ export const FIXTURE_MOVIE = {
 export const FIXTURE_SHOWTIME_START = new Date('2026-08-01T18:00:00Z');
 
 export async function seedFixture(db: Database = defaultDb): Promise<void> {
-  await db.delete(showtimes);
-  await db.delete(movies);
-  const [movie] = await db.insert(movies).values(FIXTURE_MOVIE).returning();
-  await db.insert(showtimes).values({ movieId: movie.id, startTime: FIXTURE_SHOWTIME_START });
+  // Check if fixture movie already exists
+  const existingMovie = await db.query.movies.findFirst({
+    where: (movies, { eq }) => eq(movies.tmdbId, FIXTURE_MOVIE.tmdbId),
+  });
+
+  let movie = existingMovie;
+
+  // Only insert if movie doesn't exist
+  if (!existingMovie) {
+    await db.delete(showtimes);
+    await db.delete(movies);
+    [movie] = await db.insert(movies).values(FIXTURE_MOVIE).returning();
+  }
+
+  // Check if showtime already exists before inserting
+  const existingShowtime = await db.query.showtimes.findFirst({
+    where: (showtimes, { and, eq }) =>
+      and(
+        eq(showtimes.movieId, movie!.id),
+        eq(showtimes.startTime, FIXTURE_SHOWTIME_START),
+      ),
+  });
+
+  if (!existingShowtime) {
+    await db.insert(showtimes).values({ movieId: movie!.id, startTime: FIXTURE_SHOWTIME_START });
+  }
 }
 
 const isMainModule = import.meta.url === `file://${process.argv[1]}`;
