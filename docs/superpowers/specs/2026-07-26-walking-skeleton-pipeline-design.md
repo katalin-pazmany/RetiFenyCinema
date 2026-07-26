@@ -45,10 +45,16 @@ and infrastructure as code.
 
 - **Framework:** Next.js (App Router), deployed on Vercel.
 - **Database:** Postgres via Neon, storing movies and showtimes.
-- **Movie metadata:** TMDB API supplies poster, synopsis, rating, and runtime
-  when a movie is added via seed script. On TMDB failure, the app falls back
-  to the last-cached data and shows a placeholder poster rather than failing
-  the page.
+- **Movie metadata:** TMDB API supplies synopsis, poster, runtime, director,
+  top-billed cast, trailer (YouTube key via the videos endpoint), and the
+  film's IMDb ID (via the external_ids endpoint). All fetched when a movie
+  is added via seed script. On TMDB failure, the app falls back to the
+  last-cached data and shows a placeholder poster rather than failing the
+  page.
+- **IMDb rating:** fetched separately from OMDb API, looked up by the IMDb
+  ID TMDB provides. TMDB's own score is not a substitute — it's a different
+  number from a different voting pool. On OMDb failure, the rating is
+  omitted from the page rather than blocking the movie from displaying.
 - **Content management:** movies and showtimes are added/edited through
   versioned seed/migration scripts checked into the repo. A real admin UI is
   deferred to sub-project 3.
@@ -62,7 +68,9 @@ and infrastructure as code.
 
 ### Data Model
 
-- `Movie`: id, tmdb_id, title, synopsis, poster_url, rating, runtime
+- `Movie`: id, tmdb_id, imdb_id, title, synopsis, poster_url, runtime,
+  director, actors (top-billed cast, stored as a list), imdb_rating,
+  trailer_url
 - `Showtime`: id, movie_id (FK), start_time
 
 No room field is needed on `Showtime` since the cinema has only one screen.
@@ -120,6 +128,8 @@ acceptable for the first pass, for safety).
 
 - **TMDB API failure:** fall back to last-cached movie data; show a
   placeholder poster. The page must not fail to render.
+- **OMDb API failure:** omit the IMDb rating from the page; the rest of the
+  movie's data still displays normally.
 - **Migration failure:** pipeline fails fast; promotion is blocked until
   resolved.
 
