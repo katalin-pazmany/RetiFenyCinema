@@ -1861,7 +1861,7 @@ git commit -m "ci: deploy ephemeral PR previews on their own Neon branch and run
 
 **Interfaces:**
 - Consumes: `npm run db:migrate` (Task 3)
-- Requires secrets: `VERCEL_TOKEN`, `STAGING_DATABASE_URL`, `STAGING_DOMAIN` (a Vercel-managed alias, e.g. `staging-retfenymozi.vercel.app`).
+- Requires secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `STAGING_DATABASE_URL`, `STAGING_DOMAIN` (a Vercel-managed alias, e.g. `staging-retfenymozi.vercel.app`).
 
 - [ ] **Step 1: Write the workflow**
 
@@ -1877,6 +1877,9 @@ on:
 jobs:
   deploy-staging:
     runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
