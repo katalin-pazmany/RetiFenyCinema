@@ -1572,7 +1572,9 @@ export async function seedFixture(db: Database = defaultDb): Promise<void> {
   await db.insert(showtimes).values({ movieId: movie.id, startTime: FIXTURE_SHOWTIME_START });
 }
 
-if (require.main === module) {
+const isMainModule = import.meta.url === `file://${process.argv[1]}`;
+
+if (isMainModule) {
   seedFixture()
     .then(() => {
       console.log('Fixture seeded');
