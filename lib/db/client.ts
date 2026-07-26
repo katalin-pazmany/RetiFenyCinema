@@ -1,10 +1,10 @@
-import { drizzle } from 'drizzle-orm/neon-http';
-import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 import * as schema from './schema';
 
 export function createDb(connectionString: string) {
-  const sql = neon(connectionString);
-  return drizzle(sql, { schema });
+  const client = postgres(connectionString);
+  return drizzle(client, { schema });
 }
 
 export const db = createDb(process.env.DATABASE_URL!);
