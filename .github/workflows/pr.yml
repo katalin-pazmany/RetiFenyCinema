@@ -35,3 +35,51 @@ jobs:
       - run: npm run test:unit
       - run: npm run db:migrate -- "$TEST_DATABASE_URL"
       - run: npm run test:integration
+
+  preview-e2e:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm install -g vercel@latest neonctl@latest
+
+      - name: Create ephemeral Neon branch for this PR
+        run: |
+          neonctl branches create \
+            --project-id "${{ secrets.NEON_PROJECT_ID }}" \
+            --api-key "${{ secrets.NEON_API_KEY }}" \
+            --name "pr-${{ github.event.number }}"
+
+      - name: Read the branch connection string
+        id: neon
+        run: |
+          URL=$(neonctl connection-string "pr-${{ github.event.number }}" \
+            --project-id "${{ secrets.NEON_PROJECT_ID }}" \
+            --api-key "${{ secrets.NEON_API_KEY }}")
+          echo "database_url=$URL" >> "$GITHUB_OUTPUT"
+
+      - run: npm run db:migrate -- "${{ steps.neon.outputs.database_url }}"
+      - run: npm run seed:fixture
+        env:
+          DATABASE_URL: ${{ steps.neon.outputs.database_url }}
+
+      - run: vercel pull --yes --environment=preview --token="${{ secrets.VERCEL_TOKEN }}"
+      - run: vercel build --token="${{ secrets.VERCEL_TOKEN }}"
+      - name: Deploy preview
+        id: deploy
+        run: |
+          URL=$(vercel deploy --prebuilt --token="${{ secrets.VERCEL_TOKEN }}" \
+            -e DATABASE_URL="${{ steps.neon.outputs.database_url }}" \
+            -e TMDB_API_KEY="${{ secrets.TMDB_API_KEY }}" \
+            -e OMDB_API_KEY="${{ secrets.OMDB_API_KEY }}")
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}

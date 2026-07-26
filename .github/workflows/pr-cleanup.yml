@@ -1,0 +1,15 @@
+name: PR Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  delete-neon-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - run: npm install -g neonctl@latest
+      - run: |
+          neonctl branches delete "pr-${{ github.event.number }}" \
+            --project-id "${{ secrets.NEON_PROJECT_ID }}" \
+            --api-key "${{ secrets.NEON_API_KEY }}" || true
