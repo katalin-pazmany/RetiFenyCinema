@@ -4,7 +4,15 @@ import { formatShowtime } from '@/lib/format';
 
 export default async function MovieDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const movie = await getMovieById(Number(id));
+  const numericId = Number(id);
+
+  // A non-numeric route param (e.g. /movies/abc) yields NaN, which Postgres
+  // rejects as an integer parameter — 404 instead of an unhandled 500.
+  if (!Number.isInteger(numericId)) {
+    notFound();
+  }
+
+  const movie = await getMovieById(numericId);
 
   if (!movie) {
     notFound();
