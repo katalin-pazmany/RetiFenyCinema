@@ -1,0 +1,8 @@
+.details {
+  color: var(--color-fg-muted);
+  margin-bottom: var(--space-lg);
+}
+
+.error {
+  color: var(--color-accent-text);
+}
