@@ -20,6 +20,9 @@ Booking (seats, payments, email) additionally needs:
 - `STRIPE_SECRET_KEY` — a Stripe **test-mode** secret key (free, from the Stripe dashboard). Required for the booking E2E test and for actually completing a checkout locally; not required for unit/integration tests, which either test pure functions or use a constructed Stripe event rather than a live API call.
 - `STRIPE_WEBHOOK_SECRET` — from `stripe listen --forward-to localhost:3000/api/webhooks/stripe` when testing webhooks locally (the Stripe CLI prints a `whsec_...` value), or from the webhook endpoint's settings in the Stripe dashboard once deployed.
 - `RESEND_API_KEY` — a free Resend API key, needed to actually send confirmation emails.
+- `BOOKING_FROM_EMAIL` — the confirmation email's sender, e.g. `RetfenyMozi <bookings@your-verified-domain.com>`. Must be on a domain verified with Resend; the built-in fallback sits on the reserved `.example` TLD, which Resend always rejects, so leave it unset only when you do not need mail to actually arrive.
+
+None of these are needed for `npm run test:unit` or `npm run test:integration` — the Stripe and Resend clients are constructed lazily, so importing them without credentials is safe and the tests that exercise those paths mock them.
 
 Run `npm run seed:seats` once to populate the 80 fixed seats and the three ticket types (Adult/Child/Senior) — this only needs to happen once per database, not per movie.
 
