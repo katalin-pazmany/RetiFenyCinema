@@ -74,6 +74,7 @@ secrets):
 | `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | pr.yml, main.yml, promote.yml | Non-interactive project linking for `vercel pull`/`build`/`deploy`/`promote` |
 | `NEON_API_KEY`, `NEON_PROJECT_ID` | pr.yml, pr-cleanup.yml | Creates/deletes the ephemeral per-PR database branch |
 | `TMDB_API_KEY`, `OMDB_API_KEY` | pr.yml | Movie metadata for the PR preview deployment |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY` | pr.yml | Stripe Checkout and Resend email for the PR preview deployment |
 | `STAGING_DATABASE_URL`, `STAGING_DOMAIN` | main.yml | Migrates and aliases the staging deployment |
 | `PRODUCTION_DATABASE_URL` | promote.yml | Migrates the production database before promotion |
 

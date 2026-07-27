@@ -21,7 +21,7 @@ export async function sendBookingConfirmationEmail(
   const cancelUrl = `${siteUrl}/booking/cancel/${booking.cancellationToken}`;
 
   const result = await resend.emails.send({
-    from: process.env.BOOKING_FROM_EMAIL ?? FALLBACK_FROM_ADDRESS,
+    from: process.env.BOOKING_FROM_EMAIL || FALLBACK_FROM_ADDRESS,
     to: booking.customerEmail,
     subject: `Your booking for ${movie.title} is confirmed`,
     html: `
