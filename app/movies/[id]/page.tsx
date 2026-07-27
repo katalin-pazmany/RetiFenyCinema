@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getMovieById, getShowtimesForMovie } from '@/lib/db/queries';
 import { formatShowtime } from '@/lib/format';
+import styles from './page.module.css';
 
 export default async function MovieDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -19,44 +20,60 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   }
 
   const showtimes = await getShowtimesForMovie(movie.id);
+  const posterUrl = movie.posterUrl ?? '/placeholder-poster.svg';
 
   return (
     <main>
-      <img
-        src={movie.posterUrl ?? '/placeholder-poster.svg'}
-        alt={`${movie.title} poster`}
-        width={200}
-      />
-      <h1>{movie.title}</h1>
-      <p>{movie.synopsis}</p>
-      <dl>
-        <dt>Director</dt>
-        <dd>{movie.director ?? 'Unknown'}</dd>
-        <dt>Cast</dt>
-        <dd>{movie.actors.length > 0 ? movie.actors.join(', ') : 'Unknown'}</dd>
-        <dt>Runtime</dt>
-        <dd>{movie.runtime ? `${movie.runtime} min` : 'Unknown'}</dd>
+      <div
+        className={styles.hero}
+        style={{ backgroundImage: `url(${posterUrl})` }}
+        role="img"
+        aria-label={`${movie.title} poster`}
+      >
+        <h1 className={styles.heroTitle}>{movie.title}</h1>
+      </div>
+      <dl className={styles.meta}>
+        <div className={styles.metaItem}>
+          <dt>Director</dt>
+          <dd>{movie.director ?? 'Unknown'}</dd>
+        </div>
+        <div className={styles.metaItem}>
+          <dt>Cast</dt>
+          <dd>{movie.actors.length > 0 ? movie.actors.join(', ') : 'Unknown'}</dd>
+        </div>
+        <div className={styles.metaItem}>
+          <dt>Runtime</dt>
+          <dd>{movie.runtime ? `${movie.runtime} min` : 'Unknown'}</dd>
+        </div>
         {movie.imdbRating !== null && (
-          <>
+          <div className={styles.metaItem}>
             <dt>IMDb Rating</dt>
-            <dd>{movie.imdbRating.toFixed(1)} / 10</dd>
-          </>
+            <dd className={styles.ratingBadge}>{movie.imdbRating.toFixed(1)} / 10</dd>
+          </div>
         )}
       </dl>
+      <p className={styles.synopsis}>{movie.synopsis}</p>
       {movie.trailerUrl && (
         <p>
-          <a href={movie.trailerUrl} target="_blank" rel="noreferrer">
+          <a
+            href={movie.trailerUrl}
+            target="_blank"
+            rel="noreferrer"
+            className={styles.trailerButton}
+          >
             Watch trailer
           </a>
         </p>
       )}
       <h2>Showtimes</h2>
       {showtimes.length === 0 ? (
-        <p>No showtimes scheduled yet.</p>
+        <p className={styles.empty}>No showtimes scheduled yet.</p>
       ) : (
-        <ul>
+        <ul className={styles.showtimeList}>
           {showtimes.map((showtime) => (
-            <li key={showtime.id}>{formatShowtime(showtime.startTime)}</li>
+            <li key={showtime.id} className={styles.showtimeChip}>
+              {formatShowtime(showtime.startTime)}
+            </li>
           ))}
         </ul>
       )}

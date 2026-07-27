@@ -1,0 +1,98 @@
+.hero {
+  position: relative;
+  min-height: 240px;
+  display: flex;
+  align-items: flex-end;
+  padding: var(--space-lg);
+  margin: calc(var(--space-lg) * -1) calc(var(--space-lg) * -1) var(--space-lg);
+  background-size: cover;
+  background-position: center;
+  background-color: var(--color-bg);
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(11, 11, 13, 0.95),
+    rgba(11, 11, 13, 0.55) 60%,
+    rgba(11, 11, 13, 0.3)
+  );
+}
+
+.heroTitle {
+  position: relative;
+  z-index: 1;
+  color: var(--color-fg);
+  font-size: 2rem;
+  margin: 0;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-md);
+}
+
+.metaItem dt {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-fg-muted);
+  margin-bottom: 2px;
+}
+
+.metaItem dd {
+  font-size: 0.95rem;
+}
+
+.ratingBadge {
+  display: inline-block;
+  background: var(--color-accent);
+  color: var(--color-fg);
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.synopsis {
+  color: var(--color-fg-muted);
+  line-height: 1.6;
+  margin-bottom: var(--space-md);
+  max-width: 640px;
+}
+
+.trailerButton {
+  display: inline-block;
+  border: 1px solid var(--color-accent);
+  color: var(--color-fg);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: 4px;
+  margin-bottom: var(--space-lg);
+}
+
+.trailerButton:hover {
+  background: var(--color-accent-muted);
+}
+
+.empty {
+  color: var(--color-fg-muted);
+}
+
+.showtimeList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  list-style: none;
+}
+
+.showtimeChip {
+  background: var(--color-accent-muted);
+  color: var(--color-fg);
+  font-size: 0.85rem;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: 3px;
+}
