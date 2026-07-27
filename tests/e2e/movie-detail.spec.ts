@@ -22,4 +22,11 @@ test.describe('movie detail page', () => {
       FIXTURE_MOVIE.trailerUrl,
     );
   });
+
+  test('shows an explicit Book button for the showtime', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('link', { name: new RegExp(FIXTURE_MOVIE.title) }).click();
+
+    await expect(page.getByRole('link', { name: /^Book — / })).toBeVisible();
+  });
 });

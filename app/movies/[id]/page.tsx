@@ -87,7 +87,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           {showtimes.map((showtime) => (
             <li key={showtime.id}>
               <Link href={`/book/${showtime.id}`} className={styles.showtimeChip}>
-                {formatShowtime(showtime.startTime)}
+                Book — {formatShowtime(showtime.startTime)}
               </Link>
             </li>
           ))}
