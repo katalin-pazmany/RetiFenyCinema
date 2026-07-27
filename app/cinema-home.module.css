@@ -1,0 +1,54 @@
+/* Break the homepage's <main> out of the site-wide centered, padded column
+   (see app/globals.css's bare `main` rule) to go fully edge-to-edge — the
+   scene needs the full viewport width, not a 960px reading column. */
+.main {
+  width: 100vw;
+  max-width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: 0;
+}
+
+.empty {
+  padding: var(--space-xl) var(--space-lg);
+  color: var(--color-fg-muted);
+  text-align: center;
+}
+
+/* --- Motion scene: the .scene wrapper only matters when GSAP/ScrollTrigger
+   pins .auditorium; for reduced motion, .auditorium renders on its own,
+   full 100vh, as a plain static block. Same visual treatment either way —
+   only whether it's pinned+scroll-driven differs. --- */
+.scene {
+  position: relative;
+}
+
+.auditorium {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--color-bg);
+}
+
+/* --- Static fallback: reduced motion, or fewer than
+   MIN_MOVIES_FOR_SCROLL_SCENE movies --- */
+.static {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+  padding: var(--space-xl) var(--space-lg);
+  background: var(--color-bg);
+}
+
+.staticGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-md);
+  list-style: none;
+  width: 100%;
+  max-width: 960px;
+}
