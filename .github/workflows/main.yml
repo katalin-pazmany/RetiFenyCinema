@@ -39,6 +39,11 @@ jobs:
       - run: npm run test:integration
 
       - run: npm run db:migrate -- "${{ secrets.STAGING_DATABASE_URL }}"
+      # Seats and ticket types are reference data the booking flow cannot work
+      # without. Idempotent (onConflictDoNothing), so it is safe on every deploy.
+      - run: npm run seed:seats
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
 
       - run: npm install -g vercel@latest
       - run: vercel pull --yes --environment=preview --token="${{ secrets.VERCEL_TOKEN }}"

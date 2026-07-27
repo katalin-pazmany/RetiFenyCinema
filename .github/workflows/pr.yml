@@ -92,6 +92,12 @@ jobs:
           echo "database_url=$URL" >> "$GITHUB_OUTPUT"
 
       - run: npm run db:migrate -- "${{ steps.neon.outputs.database_url }}"
+      # The 80 seats and 3 ticket types are reference data, not fixtures: every
+      # environment needs them before a booking can be made. Idempotent, so it
+      # is safe on a re-run against an already-seeded Neon branch.
+      - run: npm run seed:seats
+        env:
+          DATABASE_URL: ${{ steps.neon.outputs.database_url }}
       - run: npm run seed:fixture
         env:
           DATABASE_URL: ${{ steps.neon.outputs.database_url }}
@@ -104,7 +110,11 @@ jobs:
           URL=$(vercel deploy --prebuilt --token="${{ secrets.VERCEL_TOKEN }}" \
             -e DATABASE_URL="${{ steps.neon.outputs.database_url }}" \
             -e TMDB_API_KEY="${{ secrets.TMDB_API_KEY }}" \
-            -e OMDB_API_KEY="${{ secrets.OMDB_API_KEY }}")
+            -e OMDB_API_KEY="${{ secrets.OMDB_API_KEY }}" \
+            -e STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}" \
+            -e STRIPE_WEBHOOK_SECRET="${{ secrets.STRIPE_WEBHOOK_SECRET }}" \
+            -e RESEND_API_KEY="${{ secrets.RESEND_API_KEY }}" \
+            -e BOOKING_FROM_EMAIL="${{ secrets.BOOKING_FROM_EMAIL }}")
           echo "url=$URL" >> "$GITHUB_OUTPUT"
 
       - run: npx playwright install --with-deps chromium
