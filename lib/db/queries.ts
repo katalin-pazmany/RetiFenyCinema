@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { db as defaultDb } from './client';
-import { movies, showtimes } from './schema';
-import type { Movie, Showtime } from '../types';
+import { movies, showtimes, seats, ticketTypes } from './schema';
+import type { Movie, Showtime, Seat, TicketType } from '../types';
 
 type Database = typeof defaultDb;
 
@@ -23,6 +23,14 @@ function rowToMovie(row: typeof movies.$inferSelect): Movie {
 
 function rowToShowtime(row: typeof showtimes.$inferSelect): Showtime {
   return { id: row.id, movieId: row.movieId, startTime: row.startTime };
+}
+
+function rowToSeat(row: typeof seats.$inferSelect): Seat {
+  return { id: row.id, row: row.row, seatNumber: row.seatNumber, isAccessible: row.isAccessible };
+}
+
+function rowToTicketType(row: typeof ticketTypes.$inferSelect): TicketType {
+  return { id: row.id, code: row.code, label: row.label, priceCents: row.priceCents };
 }
 
 export async function getNowShowing(db: Database = defaultDb): Promise<Movie[]> {
@@ -55,4 +63,14 @@ export async function getAllShowtimes(db: Database = defaultDb): Promise<Array<S
     ...rowToShowtime(row.showtimes),
     movie: rowToMovie(row.movies),
   }));
+}
+
+export async function getSeats(db: Database = defaultDb): Promise<Seat[]> {
+  const rows = await db.select().from(seats).orderBy(seats.row, seats.seatNumber);
+  return rows.map(rowToSeat);
+}
+
+export async function getTicketTypes(db: Database = defaultDb): Promise<TicketType[]> {
+  const rows = await db.select().from(ticketTypes).orderBy(ticketTypes.priceCents);
+  return rows.map(rowToTicketType);
 }
