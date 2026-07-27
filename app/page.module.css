@@ -38,5 +38,5 @@
   padding: var(--space-sm);
   font-size: 1rem;
   color: var(--color-fg);
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0) 80%);
+  background: linear-gradient(to top, var(--color-scrim), rgba(var(--color-scrim-rgb), 0) 80%);
 }

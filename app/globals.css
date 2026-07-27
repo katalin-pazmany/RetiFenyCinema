@@ -3,7 +3,18 @@
   --color-fg: #f2ede7;
   --color-fg-muted: #c9c2b8;
   --color-accent: #b8272c;
+  /* Lighter crimson used for text-colour links only: #b8272c on --color-bg is
+     3.15:1, below the 4.5:1 WCAG AA threshold for body text. This clears it at
+     5.50:1 while staying in the same crimson family. Fills, borders and badges
+     keep --color-accent, which already passes in those roles. */
+  --color-accent-text: #e8555a;
   --color-accent-muted: rgba(184, 39, 44, 0.25);
+  --color-border: rgba(242, 237, 231, 0.1);
+  /* Scrim is a transparency ramp of --color-bg (#0b0b0d) so gradients over
+     images fade into the page background. The -rgb triplet exists so gradients
+     can vary the alpha while sourcing the colour from one place. */
+  --color-scrim-rgb: 11, 11, 13;
+  --color-scrim: rgba(var(--color-scrim-rgb), 0.85);
   --font-heading: var(--font-playfair), Georgia, 'Times New Roman', serif;
   --font-body: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   --space-xs: 4px;
@@ -42,16 +53,19 @@ body {
 }
 
 a {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   text-decoration: none;
 }
 
+/* The `* { margin: 0 }` reset above zeroes heading margins, so restore the gap
+   between a heading and whatever follows it. */
 h1,
 h2,
 h3 {
   font-family: var(--font-heading);
   font-weight: 700;
   line-height: 1.2;
+  margin-bottom: var(--space-md);
 }
 
 main {
@@ -66,8 +80,13 @@ main {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  /* Wrap rather than collide: below ~440px the wordmark and links cannot share
+     a line, so the links drop to a second row instead of butting up against
+     the wordmark and breaking mid-phrase. */
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-md);
   padding: var(--space-md) var(--space-lg);
-  border-bottom: 1px solid rgba(242, 237, 231, 0.1);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .site-nav .wordmark {
@@ -79,7 +98,8 @@ main {
 
 .site-nav .links {
   display: flex;
-  gap: var(--space-lg);
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-lg);
 }
 
 .site-nav .links a {
@@ -88,8 +108,16 @@ main {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--color-fg-muted);
+  /* Keep multi-word link labels ("Now Showing") on one line. */
+  white-space: nowrap;
 }
 
 .site-nav .links a:hover {
   color: var(--color-fg);
+}
+
+@media (max-width: 480px) {
+  .site-nav .links {
+    gap: var(--space-sm) var(--space-md);
+  }
 }
