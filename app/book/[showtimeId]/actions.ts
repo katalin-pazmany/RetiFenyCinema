@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { createPendingBooking, SeatUnavailableError } from '@/lib/booking/create-booking';
-import { createCheckoutSessionForBooking } from '@/lib/booking/create-checkout-session';
+import { startCheckoutForBooking } from '@/lib/booking/create-checkout-session';
 import { getMovieById, getShowtimeById, getBookingSeatsWithDetails, getBookingById } from '@/lib/db/queries';
 import type { SeatSelection } from '@/lib/types';
 
@@ -66,7 +66,13 @@ export async function createBookingAction(showtimeId: number, formData: FormData
     return { error: 'Something went wrong creating your booking. Please try again.' };
   }
 
-  const checkoutUrl = await createCheckoutSessionForBooking(booking, movie, showtime, seatDetails);
+  // `startCheckoutForBooking` releases this booking's seat hold if Stripe fails,
+  // so a failed checkout never leaves seats locked up for a purchase that can
+  // no longer be completed.
+  const checkout = await startCheckoutForBooking(booking, movie, showtime, seatDetails);
+  if (!checkout.ok) {
+    return { error: 'Something went wrong starting checkout. Please try again.' };
+  }
 
-  redirect(checkoutUrl);
+  redirect(checkout.url);
 }

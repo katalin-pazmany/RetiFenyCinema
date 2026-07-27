@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import { and, eq, gt, inArray, or } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { db as defaultDb } from '../db/client';
 import { seats, bookings, bookingSeats, ticketTypes } from '../db/schema';
+import { isActiveClaimCondition } from './availability';
 import { calculateTotalCents } from './pricing';
 import type { SeatSelection, Booking } from '../types';
 
@@ -43,13 +44,7 @@ export async function createPendingBooking(
       .select({ seatId: bookingSeats.seatId })
       .from(bookingSeats)
       .innerJoin(bookings, eq(bookingSeats.bookingId, bookings.id))
-      .where(
-        and(
-          eq(bookings.showtimeId, showtimeId),
-          inArray(bookingSeats.seatId, seatIds),
-          or(eq(bookings.status, 'confirmed'), and(eq(bookings.status, 'pending'), gt(bookings.heldUntil, new Date()))),
-        ),
-      );
+      .where(and(eq(bookings.showtimeId, showtimeId), inArray(bookingSeats.seatId, seatIds), isActiveClaimCondition()));
 
     if (claimedRows.length > 0) {
       throw new SeatUnavailableError(claimedRows.map((r) => r.seatId));
@@ -100,4 +95,24 @@ export async function createPendingBooking(
       cancelledAt: bookingRow.cancelledAt,
     };
   });
+}
+
+/**
+ * Expire a pending booking's hold immediately, so its seats become bookable
+ * again on the very next availability read instead of staying locked up for
+ * the remainder of the 10-minute window.
+ *
+ * Used when the flow that would have produced a payable Checkout Session for
+ * this booking fails: without a Checkout Session the customer can never
+ * complete it, so continuing to hold the seats only denies them to everyone.
+ *
+ * Setting `held_until` to now (rather than deleting the rows or marking the
+ * booking cancelled) is deliberate: `isActiveClaimCondition` treats a pending
+ * hold as active only while `held_until > now()`, and every such comparison
+ * happens strictly after this write, so the seats read as free right away.
+ * The abandoned row itself is kept for auditability, and it is indistinguishable
+ * from a hold the customer simply let lapse — which is exactly what it is.
+ */
+export async function releaseBookingHold(bookingId: number, db: Database = defaultDb): Promise<void> {
+  await db.update(bookings).set({ heldUntil: new Date() }).where(eq(bookings.id, bookingId));
 }
