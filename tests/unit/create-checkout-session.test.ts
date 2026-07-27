@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { buildCheckoutSessionParams } from '../../lib/booking/create-checkout-session';
-import type { Booking, Movie, Showtime, Seat, TicketType } from '../../lib/types';
+import { buildCheckoutSessionParams, type BookingSeatDetail } from '../../lib/booking/create-checkout-session';
+import type { Booking, Movie, Showtime } from '../../lib/types';
 
 const movie: Movie = {
   id: 1,
@@ -34,10 +34,25 @@ const booking: Booking = {
   cancelledAt: null,
 };
 
-const seatDetails: Array<{ seat: Seat; ticketType: TicketType }> = [
-  { seat: { id: 1, row: 'A', seatNumber: 1, isAccessible: false }, ticketType: { id: 1, code: 'adult', label: 'Adult', priceCents: 1200 } },
-  { seat: { id: 2, row: 'A', seatNumber: 2, isAccessible: false }, ticketType: { id: 2, code: 'child', label: 'Child', priceCents: 800 } },
+// `priceCents` is the per-seat snapshot taken from booking_seats at booking
+// creation; `ticketType.priceCents` is the live catalogue price. They agree
+// here, and deliberately disagree in the price-drift test below.
+const seatDetails: BookingSeatDetail[] = [
+  {
+    seat: { id: 1, row: 'A', seatNumber: 1, isAccessible: false },
+    ticketType: { id: 1, code: 'adult', label: 'Adult', priceCents: 1200 },
+    priceCents: 1200,
+  },
+  {
+    seat: { id: 2, row: 'A', seatNumber: 2, isAccessible: false },
+    ticketType: { id: 2, code: 'child', label: 'Child', priceCents: 800 },
+    priceCents: 800,
+  },
 ];
+
+function unitAmountOf(item: { price_data?: { unit_amount?: number | null } }): number | null | undefined {
+  return item.price_data?.unit_amount;
+}
 
 describe('buildCheckoutSessionParams', () => {
   it('creates one line item per ticket type with the correct quantity and price', () => {
@@ -57,14 +72,49 @@ describe('buildCheckoutSessionParams', () => {
   });
 
   it('groups multiple seats of the same ticket type into one line item with quantity > 1', () => {
-    const twoAdults = [
-      { seat: { id: 1, row: 'A', seatNumber: 1, isAccessible: false }, ticketType: { id: 1, code: 'adult', label: 'Adult', priceCents: 1200 } },
-      { seat: { id: 2, row: 'A', seatNumber: 2, isAccessible: false }, ticketType: { id: 1, code: 'adult', label: 'Adult', priceCents: 1200 } },
+    const twoAdults: BookingSeatDetail[] = [
+      {
+        seat: { id: 1, row: 'A', seatNumber: 1, isAccessible: false },
+        ticketType: { id: 1, code: 'adult', label: 'Adult', priceCents: 1200 },
+        priceCents: 1200,
+      },
+      {
+        seat: { id: 2, row: 'A', seatNumber: 2, isAccessible: false },
+        ticketType: { id: 1, code: 'adult', label: 'Adult', priceCents: 1200 },
+        priceCents: 1200,
+      },
     ];
 
     const params = buildCheckoutSessionParams(booking, movie, showtime, twoAdults, 'https://example.com');
 
     expect(params.line_items).toHaveLength(1);
     expect(params.line_items![0]).toMatchObject({ quantity: 2, price_data: { unit_amount: 1200 } });
+  });
+
+  it('charges the price snapshotted at booking time, not the current ticket-type price', () => {
+    // The catalogue price rose to 1500 after this booking was created; the
+    // customer was quoted — and bookings.total_cents records — the 1200 that
+    // was snapshotted into booking_seats.price_cents.
+    const priceRaisedSinceBooking: BookingSeatDetail[] = [
+      {
+        seat: { id: 1, row: 'A', seatNumber: 1, isAccessible: false },
+        ticketType: { id: 1, code: 'adult', label: 'Adult', priceCents: 1500 },
+        priceCents: 1200,
+      },
+    ];
+
+    const params = buildCheckoutSessionParams(booking, movie, showtime, priceRaisedSinceBooking, 'https://example.com');
+
+    expect(params.line_items).toHaveLength(1);
+    expect(unitAmountOf(params.line_items![0])).toBe(1200);
+  });
+
+  it('expires the session after 30 minutes rather than Stripe’s 24-hour default', () => {
+    const before = Math.floor(Date.now() / 1000);
+    const params = buildCheckoutSessionParams(booking, movie, showtime, seatDetails, 'https://example.com');
+    const after = Math.floor(Date.now() / 1000);
+
+    expect(params.expires_at).toBeGreaterThanOrEqual(before + 30 * 60);
+    expect(params.expires_at).toBeLessThanOrEqual(after + 30 * 60);
   });
 });
