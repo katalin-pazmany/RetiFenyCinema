@@ -14,6 +14,16 @@ npm install
 docker compose up -d db
 cp .env.example .env.local   # fill in TMDB_API_KEY and OMDB_API_KEY
 set -a; source .env.local; set +a
+```
+
+Booking (seats, payments, email) additionally needs:
+- `STRIPE_SECRET_KEY` — a Stripe **test-mode** secret key (free, from the Stripe dashboard). Required for the booking E2E test and for actually completing a checkout locally; not required for unit/integration tests, which either test pure functions or use a constructed Stripe event rather than a live API call.
+- `STRIPE_WEBHOOK_SECRET` — from `stripe listen --forward-to localhost:3000/api/webhooks/stripe` when testing webhooks locally (the Stripe CLI prints a `whsec_...` value), or from the webhook endpoint's settings in the Stripe dashboard once deployed.
+- `RESEND_API_KEY` — a free Resend API key, needed to actually send confirmation emails.
+
+Run `npm run seed:seats` once to populate the 80 fixed seats and the three ticket types (Adult/Child/Senior) — this only needs to happen once per database, not per movie.
+
+```bash
 npm run db:generate          # only needed after changing lib/db/schema.ts
 npm run db:migrate -- "$DATABASE_URL"
 npm run db:migrate -- "$TEST_DATABASE_URL"
