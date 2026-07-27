@@ -21,11 +21,12 @@ test.describe('showtimes page', () => {
     }
   });
 
-  test('lists the fixture movie with its formatted showtime', async ({ page }) => {
+  test('lists the fixture movie with a Book link for its showtime', async ({ page }) => {
     await page.goto('/showtimes');
     await expect(page.getByRole('link', { name: FIXTURE_MOVIE.title })).toBeVisible();
-    await expect(
-      page.getByText(whitespaceAgnostic(formatShowtime(FIXTURE_SHOWTIME_START))),
-    ).toBeVisible();
+
+    const bookLink = page.getByRole('link', { name: whitespaceAgnostic(`Book — ${formatShowtime(FIXTURE_SHOWTIME_START)}`) });
+    await expect(bookLink).toBeVisible();
+    await expect(bookLink).toHaveAttribute('href', /^\/book\/\d+$/);
   });
 });

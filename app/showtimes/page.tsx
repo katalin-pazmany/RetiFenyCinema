@@ -23,7 +23,9 @@ export default async function ShowtimesPage() {
               <Link href={`/movies/${showtime.movie.id}`} className={styles.movieLink}>
                 {showtime.movie.title}
               </Link>
-              <span className={styles.time}>{formatShowtime(showtime.startTime)}</span>
+              <Link href={`/book/${showtime.id}`} className={styles.bookLink}>
+                Book — {formatShowtime(showtime.startTime)}
+              </Link>
             </li>
           ))}
         </ul>
