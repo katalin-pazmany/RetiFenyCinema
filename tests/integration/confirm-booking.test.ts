@@ -94,6 +94,42 @@ describe('confirmBooking', () => {
     expect(updated.status).toBe('pending'); // left as-is for manual follow-up, not silently confirmed or deleted
   });
 
+  it('confirms despite another booking holding the same seat on an already-expired pending hold', async () => {
+    const booking = await seedPendingBooking({ heldUntil: new Date(Date.now() - 1000) });
+
+    // Mirror of the test above, but the other booking is `pending` with a hold
+    // that lapsed — an abandoned, never-paid booking. `getSeatAvailability` and
+    // `createPendingBooking` both treat that seat as free, so confirmation must
+    // too; otherwise a customer who genuinely paid is stranded in `pending`
+    // forever with no email and no cancellation link.
+    const [seatRow] = await db.select().from(seats).limit(1);
+    const [showtimeRow] = await db.select().from(showtimes).limit(1);
+    const [ticketTypeRow] = await db.select().from(ticketTypes).limit(1);
+    const [abandonedBooking] = await db
+      .insert(bookings)
+      .values({
+        showtimeId: showtimeRow.id,
+        customerName: 'Abandoned Cart',
+        customerEmail: 'abandoned@example.com',
+        status: 'pending',
+        heldUntil: new Date(Date.now() - 60 * 1000),
+        cancellationToken: 'abandoned-token',
+        totalCents: 1200,
+      })
+      .returning();
+    await db
+      .insert(bookingSeats)
+      .values({ bookingId: abandonedBooking.id, seatId: seatRow.id, ticketTypeId: ticketTypeRow.id, priceCents: 1200 });
+
+    const result = await confirmBooking('cs_test_123', 'pi_test_123', db);
+
+    expect(result).toEqual({ ok: true, bookingId: booking.id });
+
+    const [updated] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
+    expect(updated.status).toBe('confirmed');
+    expect(updated.heldUntil).toBeNull();
+  });
+
   it('returns ok:false for an unknown checkout session id', async () => {
     const result = await confirmBooking('cs_test_does_not_exist', 'pi_test_123', db);
     expect(result).toEqual({ ok: false, reason: 'No booking found for this checkout session' });
