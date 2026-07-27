@@ -36,6 +36,21 @@ jobs:
       - run: npm run db:migrate -- "$TEST_DATABASE_URL"
       - run: npm run test:integration
 
+  # Static validation only — `terraform plan` would need real Vercel/Neon
+  # credentials, which CI does not have. `init -backend=false` + `validate`
+  # need none.
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform init -backend=false
+      - run: terraform fmt -check
+      - run: terraform validate
+
   preview-e2e:
     needs: test
     runs-on: ubuntu-latest
@@ -51,12 +66,22 @@ jobs:
       - run: npm ci
       - run: npm install -g vercel@latest neonctl@latest
 
-      - name: Create ephemeral Neon branch for this PR
+      # `pull_request` also fires on `synchronize` (every push to an open PR),
+      # so this step must tolerate the branch already existing from an earlier
+      # run — Neon rejects creating a branch whose name is already taken.
+      - name: Create ephemeral Neon branch for this PR (if it does not exist)
         run: |
-          neonctl branches create \
+          BRANCH="pr-${{ github.event.number }}"
+          if neonctl branches get "$BRANCH" \
             --project-id "${{ secrets.NEON_PROJECT_ID }}" \
-            --api-key "${{ secrets.NEON_API_KEY }}" \
-            --name "pr-${{ github.event.number }}"
+            --api-key "${{ secrets.NEON_API_KEY }}" >/dev/null 2>&1; then
+            echo "Neon branch $BRANCH already exists — reusing it"
+          else
+            neonctl branches create \
+              --project-id "${{ secrets.NEON_PROJECT_ID }}" \
+              --api-key "${{ secrets.NEON_API_KEY }}" \
+              --name "$BRANCH"
+          fi
 
       - name: Read the branch connection string
         id: neon

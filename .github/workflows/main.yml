@@ -7,9 +7,24 @@ on:
 jobs:
   deploy-staging:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: retfenymozi
+          POSTGRES_PASSWORD: retfenymozi
+          POSTGRES_DB: retfenymozi_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      TEST_DATABASE_URL: postgres://retfenymozi:retfenymozi@localhost:5432/retfenymozi_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,6 +35,8 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:unit
+      - run: npm run db:migrate -- "$TEST_DATABASE_URL"
+      - run: npm run test:integration
 
       - run: npm run db:migrate -- "${{ secrets.STAGING_DATABASE_URL }}"
 
