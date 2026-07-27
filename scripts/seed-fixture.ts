@@ -1,5 +1,5 @@
 import { db as defaultDb } from '../lib/db/client';
-import { movies, showtimes } from '../lib/db/schema';
+import { movies, showtimes, bookings, bookingSeats } from '../lib/db/schema';
 
 type Database = typeof defaultDb;
 
@@ -19,6 +19,8 @@ export const FIXTURE_MOVIE = {
 export const FIXTURE_SHOWTIME_START = new Date('2026-08-01T18:00:00Z');
 
 export async function seedFixture(db: Database = defaultDb): Promise<void> {
+  await db.delete(bookingSeats);
+  await db.delete(bookings);
   await db.delete(showtimes);
   await db.delete(movies);
   const [movie] = await db.insert(movies).values(FIXTURE_MOVIE).returning();
