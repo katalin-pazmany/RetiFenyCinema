@@ -6,10 +6,34 @@ import { createCheckoutSessionForBooking } from '@/lib/booking/create-checkout-s
 import { getMovieById, getShowtimeById, getBookingSeatsWithDetails, getBookingById } from '@/lib/db/queries';
 import type { SeatSelection } from '@/lib/types';
 
+function isValidSelections(value: unknown): value is SeatSelection[] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (item) =>
+        typeof item === 'object' &&
+        item !== null &&
+        typeof (item as { seatId: unknown }).seatId === 'number' &&
+        typeof (item as { ticketTypeId: unknown }).ticketTypeId === 'number',
+    )
+  );
+}
+
 export async function createBookingAction(showtimeId: number, formData: FormData): Promise<{ error: string } | undefined> {
   const customerName = String(formData.get('customerName') ?? '').trim();
   const customerEmail = String(formData.get('customerEmail') ?? '').trim();
-  const selections = JSON.parse(String(formData.get('selections') ?? '[]')) as SeatSelection[];
+
+  let parsedSelections: unknown;
+  try {
+    parsedSelections = JSON.parse(String(formData.get('selections') ?? '[]'));
+  } catch {
+    return { error: 'Invalid booking submission.' };
+  }
+
+  if (!isValidSelections(parsedSelections)) {
+    return { error: 'Invalid booking submission.' };
+  }
+  const selections = parsedSelections;
 
   if (!customerName || !customerEmail || selections.length === 0) {
     return { error: 'Missing required booking details.' };

@@ -126,6 +126,7 @@ export function SeatMap({
                     disabled={!seat.available}
                     onClick={() => toggleSeat(seat.id)}
                     className={selectedSeatIds.includes(seat.id) ? styles.seatSelected : styles.seat}
+                    aria-pressed={selectedSeatIds.includes(seat.id)}
                     aria-label={`Seat ${seat.row}${seat.seatNumber}${seat.isAccessible ? ' (accessible)' : ''}`}
                   >
                     {seat.seatNumber}
