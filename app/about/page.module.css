@@ -1,0 +1,6 @@
+.body {
+  color: var(--color-fg-muted);
+  line-height: 1.6;
+  max-width: 640px;
+  margin-bottom: var(--space-md);
+}
