@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { getMovieById, getShowtimesForMovie } from '@/lib/db/queries';
 import { formatShowtime } from '@/lib/format';
 import styles from './page.module.css';
@@ -84,8 +85,10 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       ) : (
         <ul className={styles.showtimeList}>
           {showtimes.map((showtime) => (
-            <li key={showtime.id} className={styles.showtimeChip}>
-              {formatShowtime(showtime.startTime)}
+            <li key={showtime.id}>
+              <Link href={`/book/${showtime.id}`} className={styles.showtimeChip}>
+                {formatShowtime(showtime.startTime)}
+              </Link>
             </li>
           ))}
         </ul>
