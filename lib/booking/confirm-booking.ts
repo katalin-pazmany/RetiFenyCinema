@@ -1,6 +1,8 @@
 import { and, eq, inArray, ne } from 'drizzle-orm';
 import { db as defaultDb } from '../db/client';
 import { bookings, bookingSeats } from '../db/schema';
+import { getMovieById, getShowtimeById, getBookingSeatsWithDetails } from '../db/queries';
+import { sendBookingConfirmationEmail } from '../email/booking-confirmation';
 
 type Database = typeof defaultDb;
 
@@ -50,6 +52,23 @@ export async function confirmBooking(
     .update(bookings)
     .set({ status: 'confirmed', stripePaymentIntentId: paymentIntentId, confirmedAt: new Date(), heldUntil: null })
     .where(eq(bookings.id, booking.id));
+
+  const showtime = await getShowtimeById(booking.showtimeId, db);
+  const movie = showtime ? await getMovieById(showtime.movieId, db) : null;
+  const seatDetails = await getBookingSeatsWithDetails(booking.id, db);
+
+  if (showtime && movie) {
+    try {
+      await sendBookingConfirmationEmail(
+        { ...booking, status: 'confirmed', stripePaymentIntentId: paymentIntentId, confirmedAt: new Date(), heldUntil: null },
+        movie,
+        showtime,
+        seatDetails,
+      );
+    } catch (err) {
+      console.error('Failed to send booking confirmation email:', err);
+    }
+  }
 
   return { ok: true, bookingId: booking.id };
 }
