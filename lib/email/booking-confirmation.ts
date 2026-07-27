@@ -12,7 +12,7 @@ export async function sendBookingConfirmationEmail(
   const seatList = seatDetails.map(({ seat, ticketType }) => `${seat.row}${seat.seatNumber} (${ticketType.label})`).join(', ');
   const cancelUrl = `${siteUrl}/booking/cancel/${booking.cancellationToken}`;
 
-  await resend.emails.send({
+  const result = await resend.emails.send({
     from: 'RetfenyMozi <bookings@retfenymozi.example>',
     to: booking.customerEmail,
     subject: `Your booking for ${movie.title} is confirmed`,
@@ -24,4 +24,8 @@ export async function sendBookingConfirmationEmail(
       <p>Need to cancel? <a href="${cancelUrl}">Cancel this booking</a></p>
     `,
   });
+
+  if (result.error) {
+    throw new Error(`Resend API error: ${result.error.message}`);
+  }
 }
