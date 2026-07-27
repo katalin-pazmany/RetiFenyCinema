@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { db as defaultDb } from './client';
-import { movies, showtimes, seats, ticketTypes } from './schema';
-import type { Movie, Showtime, Seat, TicketType } from '../types';
+import { movies, showtimes, seats, ticketTypes, bookings, bookingSeats } from './schema';
+import type { Movie, Showtime, Seat, TicketType, Booking } from '../types';
 
 type Database = typeof defaultDb;
 
@@ -31,6 +31,24 @@ function rowToSeat(row: typeof seats.$inferSelect): Seat {
 
 function rowToTicketType(row: typeof ticketTypes.$inferSelect): TicketType {
   return { id: row.id, code: row.code, label: row.label, priceCents: row.priceCents };
+}
+
+function rowToBooking(row: typeof bookings.$inferSelect): Booking {
+  return {
+    id: row.id,
+    showtimeId: row.showtimeId,
+    customerName: row.customerName,
+    customerEmail: row.customerEmail,
+    status: row.status,
+    heldUntil: row.heldUntil,
+    stripeCheckoutSessionId: row.stripeCheckoutSessionId,
+    stripePaymentIntentId: row.stripePaymentIntentId,
+    cancellationToken: row.cancellationToken,
+    totalCents: row.totalCents,
+    createdAt: row.createdAt,
+    confirmedAt: row.confirmedAt,
+    cancelledAt: row.cancelledAt,
+  };
 }
 
 export async function getNowShowing(db: Database = defaultDb): Promise<Movie[]> {
@@ -73,4 +91,37 @@ export async function getSeats(db: Database = defaultDb): Promise<Seat[]> {
 export async function getTicketTypes(db: Database = defaultDb): Promise<TicketType[]> {
   const rows = await db.select().from(ticketTypes).orderBy(ticketTypes.priceCents);
   return rows.map(rowToTicketType);
+}
+
+export async function getShowtimeById(id: number, db: Database = defaultDb): Promise<Showtime | null> {
+  const rows = await db.select().from(showtimes).where(eq(showtimes.id, id)).limit(1);
+  return rows[0] ? rowToShowtime(rows[0]) : null;
+}
+
+export async function getBookingById(id: number, db: Database = defaultDb): Promise<Booking | null> {
+  const rows = await db.select().from(bookings).where(eq(bookings.id, id)).limit(1);
+  return rows[0] ? rowToBooking(rows[0]) : null;
+}
+
+export async function getBookingByCancellationToken(token: string, db: Database = defaultDb): Promise<Booking | null> {
+  const rows = await db.select().from(bookings).where(eq(bookings.cancellationToken, token)).limit(1);
+  return rows[0] ? rowToBooking(rows[0]) : null;
+}
+
+export async function getBookingSeatsWithDetails(
+  bookingId: number,
+  db: Database = defaultDb,
+): Promise<Array<{ seat: Seat; ticketType: TicketType; priceCents: number }>> {
+  const rows = await db
+    .select()
+    .from(bookingSeats)
+    .innerJoin(seats, eq(bookingSeats.seatId, seats.id))
+    .innerJoin(ticketTypes, eq(bookingSeats.ticketTypeId, ticketTypes.id))
+    .where(eq(bookingSeats.bookingId, bookingId));
+
+  return rows.map((row) => ({
+    seat: { id: row.seats.id, row: row.seats.row, seatNumber: row.seats.seatNumber, isAccessible: row.seats.isAccessible },
+    ticketType: { id: row.ticket_types.id, code: row.ticket_types.code, label: row.ticket_types.label, priceCents: row.ticket_types.priceCents },
+    priceCents: row.booking_seats.priceCents,
+  }));
 }
