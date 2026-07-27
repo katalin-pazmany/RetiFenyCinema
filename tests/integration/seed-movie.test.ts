@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createDb } from '../../lib/db/client';
-import { movies, showtimes } from '../../lib/db/schema';
+import { movies, showtimes, bookings, bookingSeats } from '../../lib/db/schema';
 import { seedMovie } from '../../scripts/seed-movie';
 
 vi.mock('../../lib/external/tmdb', () => ({
@@ -25,6 +25,8 @@ const db = createDb(process.env.TEST_DATABASE_URL!);
 
 describe('seedMovie', () => {
   beforeEach(async () => {
+    await db.delete(bookingSeats);
+    await db.delete(bookings);
     await db.delete(showtimes);
     await db.delete(movies);
   });

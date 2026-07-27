@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createDb } from '../../lib/db/client';
-import { movies, showtimes } from '../../lib/db/schema';
+import { movies, showtimes, bookings, bookingSeats } from '../../lib/db/schema';
 import { getNowShowing, getMovieById, getShowtimesForMovie, getAllShowtimes } from '../../lib/db/queries';
 
 const db = createDb(process.env.TEST_DATABASE_URL!);
@@ -20,6 +20,8 @@ const movieFixture = {
 
 describe('movie and showtime queries', () => {
   beforeEach(async () => {
+    await db.delete(bookingSeats);
+    await db.delete(bookings);
     await db.delete(showtimes);
     await db.delete(movies);
   });
