@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
+import Script from 'next/script';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import type { Movie } from '@/lib/types';
 import { usesScrollScene } from '@/lib/homepage/scroll-scene';
+import { interpolateCamera, type CameraPose } from '@/lib/homepage/sketchfab-camera';
 import styles from './cinema-home.module.css';
 
 if (typeof window !== 'undefined') {
@@ -23,6 +25,30 @@ const CAMERA_PHASE_FRACTION = 0.35;
 // Total scroll distance the pinned scene consumes, as a multiple of the
 // viewport height. Tunable: shorter feels abrupt, longer feels sluggish.
 const SCENE_HEIGHT_VH = 350;
+
+const SKETCHFAB_MODEL_UID = 'd680d16468f44cc1aefa90d0d996a26f';
+const SKETCHFAB_VIEWER_SRC = 'https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js';
+const SKETCHFAB_VIEWER_VERSION = '1.12.1';
+
+// A short but non-zero duration so setCameraLookAt eases toward each new
+// target rather than snapping — called on every scroll update, so it must
+// stay short enough not to visibly lag behind the scroll position.
+const CAMERA_MOVE_DURATION_S = 0.15;
+
+// SEATS_VIEW is captured from the model's own default camera on load (see
+// the `viewerready` handling below) — there's no way to know it up front.
+// SCREEN_VIEW is a starting guess (pulled back and turned further into the
+// scene from wherever SEATS_VIEW turns out to be) that must be tuned by
+// hand: run `npm run dev`, scroll through act one, and adjust the numbers
+// below until the camera actually ends up facing the screen. See Step 6.
+const SCREEN_VIEW_OFFSET: CameraPose = { eye: [0, 1, -6], target: [0, 0, -14] };
+
+function addCameraOffset(base: CameraPose, offset: CameraPose): CameraPose {
+  return {
+    eye: [base.eye[0] + offset.eye[0], base.eye[1] + offset.eye[1], base.eye[2] + offset.eye[2]],
+    target: [base.target[0] + offset.target[0], base.target[1] + offset.target[1], base.target[2] + offset.target[2]],
+  };
+}
 
 // A textbook useSyncExternalStore case: subscribing to a mutable value that
 // lives outside React (the OS-level motion preference via matchMedia). This
@@ -70,11 +96,71 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
   const sceneRef = useRef<HTMLDivElement | null>(null);
   const pinRef = useRef<HTMLDivElement | null>(null);
 
-  // Placeholders filled in by Task 6 (camera) and Task 7 (posters). Keeping
-  // them as no-ops here means this task's ScrollTrigger wiring is fully
-  // testable in isolation (via manual scroll) before either phase has real
-  // behavior.
-  function updateCameraPhase(_progress: number): void {}
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const sketchfabApiRef = useRef<SketchfabViewerApi | null>(null);
+  const seatsViewRef = useRef<CameraPose | null>(null);
+  const [sketchfabFailed, setSketchfabFailed] = useState(false);
+  const [scriptLoaded, setScriptLoaded] = useState(false);
+  const settledAtScreenRef = useRef(false);
+
+  useEffect(() => {
+    if (!scriptLoaded || !iframeRef.current || !window.Sketchfab) {
+      return;
+    }
+
+    const client = new window.Sketchfab(SKETCHFAB_VIEWER_VERSION, iframeRef.current);
+    client.init(SKETCHFAB_MODEL_UID, {
+      success: (api) => {
+        sketchfabApiRef.current = api;
+        api.start();
+        api.addEventListener('viewerready', () => {
+          api.getCameraLookAt((err, camera) => {
+            if (err) {
+              setSketchfabFailed(true);
+              return;
+            }
+            const seatsView: CameraPose = { eye: camera.position, target: camera.target };
+            seatsViewRef.current = seatsView;
+
+            if (prefersReducedMotionRef.current) {
+              const screenView = addCameraOffset(seatsView, SCREEN_VIEW_OFFSET);
+              api.setCameraLookAt(screenView.eye, screenView.target, 0);
+            }
+          });
+        });
+      },
+      error: () => setSketchfabFailed(true),
+    });
+    // prefersReducedMotion is read via prefersReducedMotionRef (see above)
+    // specifically so this effect does not depend on it — see that ref's
+    // comment for why.
+  }, [scriptLoaded]);
+
+  function updateCameraPhase(progress: number): void {
+    const api = sketchfabApiRef.current;
+    const seatsView = seatsViewRef.current;
+    if (!api || !seatsView) {
+      return;
+    }
+
+    if (progress >= 1) {
+      if (!settledAtScreenRef.current) {
+        const screenView = addCameraOffset(seatsView, SCREEN_VIEW_OFFSET);
+        api.setCameraLookAt(screenView.eye, screenView.target, CAMERA_MOVE_DURATION_S);
+        settledAtScreenRef.current = true;
+      }
+      return;
+    }
+
+    settledAtScreenRef.current = false;
+    const screenView = addCameraOffset(seatsView, SCREEN_VIEW_OFFSET);
+    const pose = interpolateCamera(progress, seatsView, screenView);
+    api.setCameraLookAt(pose.eye, pose.target, CAMERA_MOVE_DURATION_S);
+  }
+
+  // Placeholder filled in by Task 7 (posters). Keeping it as a no-op here
+  // means this task's ScrollTrigger wiring is fully testable in isolation
+  // (via manual scroll) before the poster phase has real behavior.
   function updatePosterPhase(_progress: number): void {}
 
   useEffect(() => {
@@ -118,9 +204,44 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
   // Shared between the pinned/scroll-driven path and the reduced-motion
   // static path — per the spec, reduced motion removes the *scroll-linked
   // rotation*, not the 3D model itself, so the same embed (title overlay,
-  // attribution, error fallback) renders either way. Task 6 fills this in.
-  const auditorium = (
-    <>{/* Task 6 fills this with the Sketchfab embed + title overlay + attribution. */}</>
+  // attribution, error fallback) renders either way.
+  const auditorium = sketchfabFailed ? (
+    <div className={styles.sketchfabFallback}>
+      <h1 className={styles.title}>RetfenyMozi</h1>
+    </div>
+  ) : (
+    <>
+      <Script
+        src={SKETCHFAB_VIEWER_SRC}
+        strategy="afterInteractive"
+        onLoad={() => setScriptLoaded(true)}
+        onError={() => setSketchfabFailed(true)}
+      />
+      <iframe
+        ref={iframeRef}
+        title="RetfenyMozi auditorium"
+        className={styles.sketchfabFrame}
+        allow="autoplay; fullscreen; xr-spatial-tracking"
+      />
+      <h1 className={styles.title}>RetfenyMozi</h1>
+      <p className={styles.attribution}>
+        <a
+          href="https://sketchfab.com/3d-models/vr-cinema-d680d16468f44cc1aefa90d0d996a26f"
+          target="_blank"
+          rel="noreferrer"
+        >
+          VR Cinema
+        </a>{' '}
+        by{' '}
+        <a href="https://sketchfab.com/LeandroN" target="_blank" rel="noreferrer">
+          Leandro Nicolas
+        </a>{' '}
+        on{' '}
+        <a href="https://sketchfab.com" target="_blank" rel="noreferrer">
+          Sketchfab
+        </a>
+      </p>
+    </>
   );
 
   // Also shared: whenever showPosterScrub is false (reduced motion OR too
