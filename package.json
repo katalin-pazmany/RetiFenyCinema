@@ -15,7 +15,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "seed": "tsx scripts/seed-movie.ts",
-    "seed:fixture": "tsx scripts/seed-fixture.ts"
+    "seed:fixture": "tsx scripts/seed-fixture.ts",
+    "seed:seats": "tsx scripts/seed-seats.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
