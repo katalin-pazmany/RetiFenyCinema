@@ -1,10 +1,15 @@
-.hero {
+.heroWrapper {
   position: relative;
   min-height: 240px;
+  margin: calc(var(--space-lg) * -1) calc(var(--space-lg) * -1) var(--space-lg);
   display: flex;
   align-items: flex-end;
   padding: var(--space-lg);
-  margin: calc(var(--space-lg) * -1) calc(var(--space-lg) * -1) var(--space-lg);
+}
+
+.hero {
+  position: absolute;
+  inset: 0;
   background-size: cover;
   background-position: center;
   background-color: var(--color-bg);

@@ -24,12 +24,13 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
 
   return (
     <main>
-      <div
-        className={styles.hero}
-        style={{ backgroundImage: `url(${posterUrl})` }}
-        role="img"
-        aria-label={`${movie.title} poster`}
-      >
+      <div className={styles.heroWrapper}>
+        <div
+          className={styles.hero}
+          style={{ backgroundImage: `url(${posterUrl})` }}
+          role="img"
+          aria-label={`${movie.title} poster`}
+        />
         <h1 className={styles.heroTitle}>{movie.title}</h1>
       </div>
       <dl className={styles.meta}>
