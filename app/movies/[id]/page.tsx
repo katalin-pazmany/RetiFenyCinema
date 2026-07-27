@@ -20,17 +20,29 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   }
 
   const showtimes = await getShowtimesForMovie(movie.id);
-  const posterUrl = movie.posterUrl ?? '/placeholder-poster.svg';
 
   return (
     <main>
       <div className={styles.heroWrapper}>
-        <div
-          className={styles.hero}
-          style={{ backgroundImage: `url(${posterUrl})` }}
-          role="img"
-          aria-label={`${movie.title} poster`}
-        />
+        {/*
+          With no poster, fall through to .hero's background-color rather than
+          stretching the 92x138 placeholder SVG over a 240px-tall banner, which
+          would turn its "No Poster" text into a blurry watermark behind the
+          title. The URL is quoted so a poster path containing a space or a
+          parenthesis cannot break the CSS declaration.
+        */}
+        {movie.posterUrl ? (
+          <div
+            className={styles.hero}
+            style={{ backgroundImage: `url("${movie.posterUrl}")` }}
+            role="img"
+            aria-label={`${movie.title} poster`}
+          />
+        ) : (
+          // No poster: a plain dark panel, decorative only — labelling it as a
+          // poster image would announce something that is not there.
+          <div className={styles.hero} />
+        )}
         <h1 className={styles.heroTitle}>{movie.title}</h1>
       </div>
       <dl className={styles.meta}>
