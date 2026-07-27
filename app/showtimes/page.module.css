@@ -1,0 +1,32 @@
+.empty {
+  color: var(--color-fg-muted);
+}
+
+.list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid rgba(242, 237, 231, 0.1);
+}
+
+.movieLink {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+}
+
+.movieLink:hover {
+  text-decoration: underline;
+}
+
+.time {
+  font-size: 0.85rem;
+  color: var(--color-fg-muted);
+  font-family: var(--font-body);
+}
