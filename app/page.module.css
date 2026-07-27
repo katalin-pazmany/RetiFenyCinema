@@ -9,10 +9,6 @@
   list-style: none;
 }
 
-.card {
-  position: relative;
-}
-
 .cardLink {
   position: relative;
   display: block;

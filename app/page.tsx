@@ -18,7 +18,7 @@ export default async function HomePage() {
       ) : (
         <ul className={styles.grid}>
           {movies.map((movie) => (
-            <li key={movie.id} className={styles.card}>
+            <li key={movie.id}>
               <Link href={`/movies/${movie.id}`} className={styles.cardLink}>
                 {movie.posterUrl ? (
                   <img src={movie.posterUrl} alt={`${movie.title} poster`} className={styles.poster} />
