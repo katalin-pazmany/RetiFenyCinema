@@ -95,6 +95,7 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
 
   const sceneRef = useRef<HTMLDivElement | null>(null);
   const pinRef = useRef<HTMLDivElement | null>(null);
+  const trackRef = useRef<HTMLDivElement | null>(null);
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const sketchfabApiRef = useRef<SketchfabViewerApi | null>(null);
@@ -158,10 +159,14 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
     api.setCameraLookAt(pose.eye, pose.target, CAMERA_MOVE_DURATION_S);
   }
 
-  // Placeholder filled in by Task 7 (posters). Keeping it as a no-op here
-  // means this task's ScrollTrigger wiring is fully testable in isolation
-  // (via manual scroll) before the poster phase has real behavior.
-  function updatePosterPhase(_progress: number): void {}
+  function updatePosterPhase(progress: number): void {
+    const track = trackRef.current;
+    if (!track) {
+      return;
+    }
+    const maxTranslate = Math.max(track.scrollWidth - window.innerWidth + 160, 0);
+    gsap.set(track, { x: -progress * maxTranslate });
+  }
 
   useEffect(() => {
     if (prefersReducedMotion || !sceneRef.current || !pinRef.current) {
@@ -263,9 +268,27 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
       <div className={styles.scene} ref={sceneRef}>
         <div className={styles.auditorium} ref={pinRef}>
           {auditorium}
-          {/* Task 7 fills this with the poster track + glow, as a sibling
-              of {auditorium} within this same pinned div, rendered only
-              when showPosterScrub is true. */}
+          {showPosterScrub && (
+            <div className={styles.glow} aria-hidden="true" />
+          )}
+          {showPosterScrub && (
+            <div className={styles.track} ref={trackRef}>
+              {movies.map((movie) => (
+                <Link key={movie.id} href={`/movies/${movie.id}`} className={styles.poster}>
+                  {movie.posterUrl ? (
+                    <img src={movie.posterUrl} alt={`${movie.title} poster`} className={styles.posterImage} />
+                  ) : (
+                    <img
+                      src="/placeholder-poster.svg"
+                      alt={`${movie.title} poster placeholder`}
+                      className={styles.posterImage}
+                    />
+                  )}
+                  <h2 className={styles.posterTitle}>{movie.title}</h2>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       {staticPosterGrid}
