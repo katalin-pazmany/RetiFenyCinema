@@ -15,16 +15,24 @@ if (typeof window !== 'undefined') {
 }
 
 // The combined pinned scene's scroll progress (0..1) is split into two
-// phases: the first CAMERA_PHASE_FRACTION rotates the 3D camera from the
-// seats toward the screen (Task 6); the rest scrubs the poster track once
-// the camera has settled (Task 7). 0.35 gives the camera turn a shorter
-// "establishing" beat and the poster browsing — the actual point of the
-// page — the majority of the scroll budget.
-const CAMERA_PHASE_FRACTION = 0.35;
+// phases: a fixed-length camera turn (seats -> screen), then a poster
+// scrub sized to the actual poster track width. The two budgets are
+// computed in pixels (see cameraBudgetPxRef/totalBudgetPxRef below) so the
+// camera-phase fraction is derived, not a guessed constant — otherwise the
+// camera beat and the poster beat drift out of proportion depending on how
+// many movies are showing (e.g. with exactly 2 movies the track is often
+// no wider than the viewport, producing a dead scroll zone if the camera
+// beat were still a fixed fraction of a fixed total).
 
-// Total scroll distance the pinned scene consumes, as a multiple of the
-// viewport height. Tunable: shorter feels abrupt, longer feels sluggish.
-const SCENE_HEIGHT_VH = 350;
+// Fixed budget for the camera's "turn to face the screen" beat, as a
+// multiple of the viewport height. Tunable: shorter feels abrupt, longer
+// feels sluggish.
+const CAMERA_SCROLL_VH_MULTIPLIER = 1.2;
+
+// Slack so the last poster fully clears the viewport before the pin
+// releases — shared with updatePosterPhase's own maxTranslate calculation
+// below, so the two never drift apart.
+const POSTER_TRACK_END_PADDING_PX = 160;
 
 const SKETCHFAB_MODEL_UID = 'd680d16468f44cc1aefa90d0d996a26f';
 const SKETCHFAB_VIEWER_SRC = 'https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js';
@@ -104,6 +112,13 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const settledAtScreenRef = useRef(false);
 
+  // Cached scroll-budget-in-pixels values, written once per ScrollTrigger
+  // `end` recompute (see the effect below) and read on every scroll tick in
+  // `onUpdate` — avoids reading `track.scrollWidth` (a layout-forcing
+  // read) on every single scroll event.
+  const cameraBudgetPxRef = useRef(0);
+  const totalBudgetPxRef = useRef(0);
+
   useEffect(() => {
     if (!scriptLoaded || !iframeRef.current || !window.Sketchfab) {
       return;
@@ -164,7 +179,7 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
     if (!track) {
       return;
     }
-    const maxTranslate = Math.max(track.scrollWidth - window.innerWidth + 160, 0);
+    const maxTranslate = Math.max(track.scrollWidth - window.innerWidth + POSTER_TRACK_END_PADDING_PX, 0);
     gsap.set(track, { x: -progress * maxTranslate });
   }
 
@@ -173,27 +188,69 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
       return;
     }
 
-    const trigger = ScrollTrigger.create({
-      trigger: sceneRef.current,
-      start: 'top top',
-      end: () => `+=${window.innerHeight * (SCENE_HEIGHT_VH / 100)}`,
-      pin: pinRef.current,
-      scrub: true,
-      onUpdate: (self) => {
-        if (self.progress <= CAMERA_PHASE_FRACTION) {
-          const cameraProgress = self.progress / CAMERA_PHASE_FRACTION;
-          updateCameraPhase(cameraProgress);
-        } else {
-          updateCameraPhase(1); // camera phase complete — hold the final pose
-          if (showPosterScrub) {
-            const posterProgress = (self.progress - CAMERA_PHASE_FRACTION) / (1 - CAMERA_PHASE_FRACTION);
-            updatePosterPhase(posterProgress);
+    // GSAP/ScrollTrigger failing to pin (JS disabled, an exception, an
+    // ad-blocked bundle) must not leave the poster track physically
+    // unreachable — .track's CSS only switches into its pinned/absolute
+    // layout once [data-pinned="true"] is set below, on success. On
+    // failure it stays in its default reachable, non-clipped layout.
+    let trigger: ScrollTrigger | undefined;
+    try {
+      trigger = ScrollTrigger.create({
+        trigger: sceneRef.current,
+        start: 'top top',
+        end: () => {
+          const cameraBudget = window.innerHeight * CAMERA_SCROLL_VH_MULTIPLIER;
+          const posterBudget =
+            showPosterScrub && trackRef.current
+              ? Math.max(trackRef.current.scrollWidth - window.innerWidth + POSTER_TRACK_END_PADDING_PX, 0)
+              : 0;
+          cameraBudgetPxRef.current = cameraBudget;
+          totalBudgetPxRef.current = cameraBudget + posterBudget;
+          return `+=${cameraBudget + posterBudget}`;
+        },
+        pin: pinRef.current,
+        scrub: true,
+        // Recompute `end` after resize and once poster images finish
+        // loading — track.scrollWidth can change then, and the budget
+        // above needs to be re-evaluated when it does.
+        invalidateOnRefresh: true,
+        onUpdate: (self) => {
+          const cameraFraction =
+            totalBudgetPxRef.current > 0 ? cameraBudgetPxRef.current / totalBudgetPxRef.current : 1;
+          // Only reveal the posters/glow once the camera has finished its
+          // turn to face the screen — see .auditorium[data-phase="posters"]
+          // in the stylesheet. Strictly-less-than (not <=) matters here:
+          // when posterBudget is 0 (e.g. a short 2-poster track that
+          // already fits within the viewport), cameraFraction is exactly 1,
+          // and self.progress can reach exactly 1 at full scroll — with
+          // <=, that case would compare 1 <= 1 and stay 'camera' forever,
+          // permanently hiding/disabling the posters.
+          if (pinRef.current) {
+            pinRef.current.dataset.phase = self.progress < cameraFraction ? 'camera' : 'posters';
           }
-        }
-      },
-    });
+          if (self.progress < cameraFraction) {
+            const cameraProgress = cameraFraction > 0 ? self.progress / cameraFraction : 1;
+            updateCameraPhase(cameraProgress);
+          } else {
+            updateCameraPhase(1); // camera phase complete — hold the final pose
+            if (showPosterScrub) {
+              const posterProgress = cameraFraction < 1 ? (self.progress - cameraFraction) / (1 - cameraFraction) : 0;
+              updatePosterPhase(posterProgress);
+            }
+          }
+        },
+      });
+      if (pinRef.current) {
+        pinRef.current.dataset.pinned = 'true';
+      }
+    } catch (error) {
+      // Not a Sketchfab failure (setSketchfabFailed would be the wrong
+      // signal here) — this is GSAP itself failing to pin. Leave
+      // data-pinned unset so the CSS fallback layout applies.
+      console.error('Failed to create the cinema scroll scene ScrollTrigger:', error);
+    }
 
-    return () => trigger.kill();
+    return () => trigger?.kill();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-running on every movies/showPosterScrub change would tear down and rebuild the trigger mid-scroll; this effect intentionally only depends on prefersReducedMotion. updateCameraPhase/updatePosterPhase are also intentionally omitted — both only ever read from refs/constants, never from props or state, so which render's copy of them gets closed over here doesn't matter.
   }, [prefersReducedMotion]);
 

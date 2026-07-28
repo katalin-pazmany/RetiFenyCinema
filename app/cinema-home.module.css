@@ -99,7 +99,24 @@
   text-decoration: underline;
 }
 
-/* --- Act two: poster track scroll-scrub --- */
+/* --- Act two: poster track scroll-scrub ---
+   Default state (below) is a normal, always-visible, reachable layout — this
+   is what a visitor gets when GSAP/ScrollTrigger never successfully pins the
+   scene (JS disabled, an exception, an ad-blocked bundle): the track is
+   in-flow inside .auditorium, horizontally scrollable on its own, at full
+   opacity. Once cinema-home.tsx successfully creates the ScrollTrigger it
+   marks .auditorium[data-pinned="true"], which switches the track into its
+   pinned/absolute/transform-driven layout below — and only then do the
+   phase-gated opacity rules apply, hiding the glow/track until the camera
+   has finished turning to face the screen (data-phase="posters"), per the
+   design spec's "handoff". A visitor without a successful pin always sees
+   the track, full opacity, never gated on a phase that doesn't apply to them. */
+.glow,
+.track {
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+
 .glow {
   position: absolute;
   inset: 0;
@@ -109,14 +126,39 @@
 }
 
 .track {
+  position: relative;
+  display: flex;
+  gap: var(--space-lg);
+  padding: 0 8vw;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.auditorium[data-pinned='true'] .track {
   position: absolute;
   z-index: 2;
   bottom: 8vh;
   left: 0;
-  display: flex;
-  gap: var(--space-lg);
-  padding: 0 8vw;
+  overflow-x: visible;
   will-change: transform;
+}
+
+.auditorium[data-pinned='true'] .glow,
+.auditorium[data-pinned='true'] .track {
+  opacity: 0;
+}
+
+.auditorium[data-pinned='true'] .track {
+  pointer-events: none; /* prevent clicking invisible/off-phase posters */
+}
+
+.auditorium[data-pinned='true'][data-phase='posters'] .glow,
+.auditorium[data-pinned='true'][data-phase='posters'] .track {
+  opacity: 1;
+}
+
+.auditorium[data-pinned='true'][data-phase='posters'] .track {
+  pointer-events: auto;
 }
 
 .poster {
