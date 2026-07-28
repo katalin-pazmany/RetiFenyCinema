@@ -81,5 +81,6 @@
 }
 
 .bookButton:hover {
-  background: var(--color-accent-text);
+  background: var(--color-accent);
+  filter: brightness(0.85);
 }
