@@ -16,14 +16,16 @@ test.describe('browsing movies', () => {
 
   test('clicking a movie navigates to its detail page', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('link', { name: new RegExp(FIXTURE_MOVIE.title) }).click();
+    await page.getByRole('link', { name: FIXTURE_MOVIE.title, exact: true }).click();
     await expect(page).toHaveURL(/\/movies\/\d+/);
     await expect(page.getByText(FIXTURE_MOVIE.synopsis)).toBeVisible();
   });
 
   test('shows a Book button for the fixture movie\'s showtime', async ({ page }) => {
     await page.goto('/');
-    const bookLink = page.getByRole('link', { name: /^Book — / });
+    const bookLink = page.getByRole('link', {
+      name: new RegExp(`^Book ${FIXTURE_MOVIE.title} — `),
+    });
     await expect(bookLink).toBeVisible();
     await bookLink.click();
     await expect(page).toHaveURL(/\/book\/\d+/);

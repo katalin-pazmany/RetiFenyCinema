@@ -41,7 +41,11 @@ export default async function HomePage() {
                   <ul className={styles.showtimeList}>
                     {movie.showtimes.map((showtime) => (
                       <li key={showtime.id}>
-                        <Link href={`/book/${showtime.id}`} className={styles.bookButton}>
+                        <Link
+                          href={`/book/${showtime.id}`}
+                          className={styles.bookButton}
+                          aria-label={`Book ${movie.title} — ${formatShowtime(showtime.startTime)}`}
+                        >
                           Book — {formatShowtime(showtime.startTime)}
                         </Link>
                       </li>

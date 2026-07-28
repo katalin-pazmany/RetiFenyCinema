@@ -11,7 +11,7 @@ test.describe('movie detail page', () => {
 
   test('shows synopsis, director, cast, rating, and trailer link', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('link', { name: new RegExp(FIXTURE_MOVIE.title) }).click();
+    await page.getByRole('link', { name: FIXTURE_MOVIE.title, exact: true }).click();
 
     await expect(page.getByText(FIXTURE_MOVIE.synopsis)).toBeVisible();
     await expect(page.getByText(FIXTURE_MOVIE.director)).toBeVisible();
@@ -25,7 +25,7 @@ test.describe('movie detail page', () => {
 
   test('shows an explicit Book button for the showtime', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('link', { name: new RegExp(FIXTURE_MOVIE.title) }).click();
+    await page.getByRole('link', { name: FIXTURE_MOVIE.title, exact: true }).click();
 
     await expect(page.getByRole('link', { name: /^Book — / })).toBeVisible();
   });
