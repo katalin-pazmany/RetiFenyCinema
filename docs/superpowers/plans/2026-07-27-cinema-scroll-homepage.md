@@ -493,7 +493,7 @@ Create `app/cinema-home.tsx`:
 ```tsx
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -517,18 +517,28 @@ const CAMERA_PHASE_FRACTION = 0.35;
 // viewport height. Tunable: shorter feels abrupt, longer feels sluggish.
 const SCENE_HEIGHT_VH = 350;
 
+// A textbook useSyncExternalStore case: subscribing to a mutable value that
+// lives outside React (the OS-level motion preference via matchMedia). This
+// also happens to be the only form eslint-plugin-react-hooks's
+// react-hooks/set-state-in-effect rule accepts for this pattern — a plain
+// useState+useEffect that calls setState synchronously in the effect body
+// is flagged, since it causes an extra render pass right after mount.
+function subscribeToReducedMotionChange(onChange: () => void): () => void {
+  const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+  query.addEventListener('change', onChange);
+  return () => query.removeEventListener('change', onChange);
+}
+
+function getReducedMotionSnapshot(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function getReducedMotionServerSnapshot(): boolean {
+  return false; // SSR has no OS preference to read; resolved on the client after hydration.
+}
+
 function usePrefersReducedMotion(): boolean {
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-
-  useEffect(() => {
-    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setPrefersReducedMotion(query.matches);
-    const onChange = (event: MediaQueryListEvent) => setPrefersReducedMotion(event.matches);
-    query.addEventListener('change', onChange);
-    return () => query.removeEventListener('change', onChange);
-  }, []);
-
-  return prefersReducedMotion;
+  return useSyncExternalStore(subscribeToReducedMotionChange, getReducedMotionSnapshot, getReducedMotionServerSnapshot);
 }
 
 export function CinemaHome({ movies }: { movies: Movie[] }) {
@@ -544,12 +554,27 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
   // re-run client.init() (creating a second embedded viewer) if the user's
   // OS-level motion preference changes after the model has already loaded,
   // instead of only affecting the one-time decision of where the camera
-  // starts.
+  // starts. The assignment lives in its own effect, not inline in the
+  // component body — eslint-plugin-react-hooks's react-hooks/refs rule
+  // forbids writing to a ref's `.current` during render; refs may only be
+  // read or written inside effects/event handlers.
   const prefersReducedMotionRef = useRef(prefersReducedMotion);
-  prefersReducedMotionRef.current = prefersReducedMotion;
+  useEffect(() => {
+    prefersReducedMotionRef.current = prefersReducedMotion;
+  }, [prefersReducedMotion]);
 
   const sceneRef = useRef<HTMLDivElement | null>(null);
   const pinRef = useRef<HTMLDivElement | null>(null);
+
+  // Placeholders filled in by Task 6 (camera) and Task 7 (posters). Keeping
+  // them as no-ops here means this task's ScrollTrigger wiring is fully
+  // testable in isolation (via manual scroll) before either phase has real
+  // behavior. Declared here, before the effect that calls them, rather than
+  // after — eslint-plugin-react-hooks's react-hooks/immutability rule
+  // rejects a function used inside an effect before its own declaration,
+  // even though plain JS function-hoisting would otherwise allow it.
+  function updateCameraPhase(_progress: number): void {}
+  function updatePosterPhase(_progress: number): void {}
 
   useEffect(() => {
     if (prefersReducedMotion || !sceneRef.current || !pinRef.current) {
@@ -580,13 +605,6 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-running on every movies/showPosterScrub change would tear down and rebuild the trigger mid-scroll; this effect intentionally only depends on prefersReducedMotion. updateCameraPhase/updatePosterPhase are also intentionally omitted — both only ever read from refs/constants, never from props or state, so which render's copy of them gets closed over here doesn't matter.
   }, [prefersReducedMotion]);
 
-  // Placeholders filled in by Task 6 (camera) and Task 7 (posters). Keeping
-  // them as no-ops here means this task's ScrollTrigger wiring is fully
-  // testable in isolation (via manual scroll) before either phase has real
-  // behavior.
-  function updateCameraPhase(_progress: number): void {}
-  function updatePosterPhase(_progress: number): void {}
-
   if (movies.length === 0) {
     return (
       <main className={styles.main}>
@@ -596,36 +614,48 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
     );
   }
 
-  // Shared between the pinned/scroll-driven path and the reduced-motion
-  // static path — per the spec, reduced motion removes the *scroll-linked
-  // rotation*, not the 3D model itself, so the same embed (title overlay,
-  // attribution, error fallback) renders either way. Task 6 fills this in.
+  // The scene/auditorium wrapper renders unconditionally, regardless of
+  // prefersReducedMotion — ONLY whether the effect above actually creates a
+  // ScrollTrigger for it varies. This is deliberate, not an oversight: an
+  // earlier draft returned two structurally different trees (a flat
+  // reduced-motion div vs. this nested scene/auditorium wrapper) gated on
+  // prefersReducedMotion. useSyncExternalStore's SSR-safe hydration
+  // contract means the first client render always uses the server
+  // snapshot (false) regardless of the real value, so for a visitor who
+  // actually prefers reduced motion, React briefly renders the pinned tree,
+  // the ScrollTrigger effect fires and GSAP synchronously inserts its own
+  // pin-spacer wrapper into the DOM (outside React's bookkeeping) — and
+  // then, a moment later, React corrects to the real value and tries to
+  // unmount that same subtree, calling removeChild on a node GSAP had
+  // already re-parented. That's a real crash (`NotFoundError: Failed to
+  // execute 'removeChild'...`), reproduced in both dev and a production
+  // build. Keeping ONE tree shape always mounted means React never needs to
+  // unmount anything out from under GSAP — the ScrollTrigger effect's own
+  // `if (prefersReducedMotion || ...) return;` guard (above) is the only
+  // thing that changes, and its cleanup (`trigger.kill()`) is GSAP's own
+  // API for reversing its pin-spacer insertion, which runs synchronously
+  // and safely before React's next commit.
   const auditorium = (
     <>{/* Task 6 fills this with the Sketchfab embed + title overlay + attribution. */}</>
   );
 
-  // Also shared: whenever showPosterScrub is false (reduced motion OR too
-  // few movies to scroll-scrub), render the plain static grid instead.
+  // Whenever showPosterScrub is false (reduced motion OR too few movies to
+  // scroll-scrub), render the plain static grid instead — this one IS safe
+  // to render conditionally, since it's a sibling of the scene wrapper, not
+  // something GSAP has touched.
   const staticPosterGrid = !showPosterScrub && (
     <div className={styles.static}>
       <ul className={styles.staticGrid}>
         {movies.map((movie) => (
           <li key={movie.id}>
-            <Link href={`/movies/${movie.id}`}>{movie.title}</Link>
+            <Link href={`/movies/${movie.id}`}>
+              <h2>{movie.title}</h2>
+            </Link>
           </li>
         ))}
       </ul>
     </div>
   );
-
-  if (prefersReducedMotion) {
-    return (
-      <main className={styles.main}>
-        <div className={styles.auditorium}>{auditorium}</div>
-        {staticPosterGrid}
-      </main>
-    );
-  }
 
   return (
     <main className={styles.main}>
@@ -682,11 +712,7 @@ static fallback list below it (the fixture only seeds one movie, so
 `showPosterScrub` is `false` here — this is the expected few-movies path).
 No console errors.
 
-Then, in your browser's DevTools, enable "Emulate CSS prefers-reduced-motion: reduce" and reload. Expect: still a full-bleed dark 100vh block (empty/black
-for now, same as above), but NOT pinned — scrolling past it should move it
-normally rather than holding it in place — followed directly by the same
-static list. No ScrollTrigger created (check the console — no GSAP
-warnings, and no pin-spacer element in the DOM).
+Then, in your browser's DevTools, enable "Emulate CSS prefers-reduced-motion: reduce" **and reload the page with it already active** (not toggle it after the page has already loaded — that's the specific sequence that exposed a real GSAP/hydration crash during this task's own development: `NotFoundError: Failed to execute 'removeChild'...`, reproduced in both `next dev` and a production `next build && next start` run). Confirm the page loads with **no console errors at all** — that's the primary thing this check is for. Then confirm the visual result: still a full-bleed dark 100vh block (empty/black for now, same as above), but NOT pinned — scrolling past it should move it normally rather than holding it in place — followed directly by the same static list. No pin-spacer element left in the DOM once settled (GSAP's `ScrollTrigger.create()`/`.kill()` cycle should leave no trace once the effect has resolved to "reduced motion, don't pin").
 
 - [ ] **Step 7: Commit**
 
@@ -729,7 +755,13 @@ watching it" is the actual, correct engineering process, not a shortcut.
 
 - [ ] **Step 1: Add the Sketchfab constants and camera-phase state**
 
-In `app/cinema-home.tsx`, add these imports and constants near the top (after the existing imports, before `CAMERA_PHASE_FRACTION`):
+In `app/cinema-home.tsx`, add `useState` to the existing React import (Task 5's `usePrefersReducedMotion` doesn't need it, but this task's `sketchfabFailed`/`scriptLoaded` state does):
+
+```tsx
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+```
+
+Then add these imports and constants near the top (after the existing imports, before `CAMERA_PHASE_FRACTION`):
 
 ```tsx
 import Script from 'next/script';
