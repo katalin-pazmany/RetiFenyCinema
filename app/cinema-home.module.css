@@ -53,6 +53,12 @@
   max-width: 960px;
 }
 
+/* .poster has a fixed width for its flex-row usage in .track (the
+   scroll-scrub); in the static grid it should fill its grid cell instead. */
+.staticGrid .poster {
+  width: 100%;
+}
+
 /* --- Act one: Sketchfab embed --- */
 .sketchfabFrame {
   position: absolute;

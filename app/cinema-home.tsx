@@ -82,6 +82,24 @@ function usePrefersReducedMotion(): boolean {
   return useSyncExternalStore(subscribeToReducedMotionChange, getReducedMotionSnapshot, getReducedMotionServerSnapshot);
 }
 
+// Shared between the scroll-scrub track and the static reduced-motion/
+// few-movies fallback grid, so the two paths can't independently drift out
+// of sync again (the fallback previously lost its poster image and alt
+// text entirely — see the design spec's requirement that the reduced-
+// motion path stay "visually similar to today's homepage grid").
+function PosterCard({ movie }: { movie: Movie }) {
+  return (
+    <Link href={`/movies/${movie.id}`} className={styles.poster}>
+      {movie.posterUrl ? (
+        <img src={movie.posterUrl} alt={`${movie.title} poster`} className={styles.posterImage} />
+      ) : (
+        <img src="/placeholder-poster.svg" alt={`${movie.title} poster placeholder`} className={styles.posterImage} />
+      )}
+      <h2 className={styles.posterTitle}>{movie.title}</h2>
+    </Link>
+  );
+}
+
 export function CinemaHome({ movies }: { movies: Movie[] }) {
   const prefersReducedMotion = usePrefersReducedMotion();
   // False whenever reduced motion is preferred OR there are too few movies
@@ -318,9 +336,7 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
       <ul className={styles.staticGrid}>
         {movies.map((movie) => (
           <li key={movie.id}>
-            <Link href={`/movies/${movie.id}`}>
-              <h2>{movie.title}</h2>
-            </Link>
+            <PosterCard movie={movie} />
           </li>
         ))}
       </ul>
@@ -338,18 +354,7 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
           {showPosterScrub && (
             <div className={styles.track} ref={trackRef}>
               {movies.map((movie) => (
-                <Link key={movie.id} href={`/movies/${movie.id}`} className={styles.poster}>
-                  {movie.posterUrl ? (
-                    <img src={movie.posterUrl} alt={`${movie.title} poster`} className={styles.posterImage} />
-                  ) : (
-                    <img
-                      src="/placeholder-poster.svg"
-                      alt={`${movie.title} poster placeholder`}
-                      className={styles.posterImage}
-                    />
-                  )}
-                  <h2 className={styles.posterTitle}>{movie.title}</h2>
-                </Link>
+                <PosterCard key={movie.id} movie={movie} />
               ))}
             </div>
           )}
