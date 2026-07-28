@@ -20,4 +20,12 @@ test.describe('browsing movies', () => {
     await expect(page).toHaveURL(/\/movies\/\d+/);
     await expect(page.getByText(FIXTURE_MOVIE.synopsis)).toBeVisible();
   });
+
+  test('shows a Book button for the fixture movie\'s showtime', async ({ page }) => {
+    await page.goto('/');
+    const bookLink = page.getByRole('link', { name: /^Book — / });
+    await expect(bookLink).toBeVisible();
+    await bookLink.click();
+    await expect(page).toHaveURL(/\/book\/\d+/);
+  });
 });

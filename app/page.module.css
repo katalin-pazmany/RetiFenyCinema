@@ -1,0 +1,85 @@
+.empty {
+  color: var(--color-fg-muted);
+}
+
+.list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.card {
+  display: flex;
+  gap: var(--space-lg);
+  padding-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.poster {
+  flex: 0 0 auto;
+  width: 120px;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 4px;
+  display: block;
+}
+
+.details {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  margin-bottom: var(--space-xs);
+}
+
+.title a {
+  color: var(--color-fg);
+}
+
+.title a:hover {
+  color: var(--color-accent-text);
+}
+
+.ratingBadge {
+  display: inline-block;
+  background: var(--color-accent);
+  color: var(--color-fg);
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: var(--space-sm);
+}
+
+.synopsis {
+  color: var(--color-fg-muted);
+  line-height: 1.6;
+  margin-bottom: var(--space-md);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.showtimeList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  list-style: none;
+}
+
+.bookButton {
+  display: inline-block;
+  background: var(--color-accent);
+  color: var(--color-fg);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: var(--space-xs) var(--space-md);
+  border-radius: 4px;
+}
+
+.bookButton:hover {
+  background: var(--color-accent-text);
+}
