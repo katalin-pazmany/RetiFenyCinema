@@ -76,9 +76,9 @@ main {
   margin: 0 auto;
 }
 
-/* Bypasses the pinned scroll-scrub section on the homepage entirely for
-   keyboard/screen-reader users — hidden off-screen until it receives
-   keyboard focus (tabbing from the top of the page lands on it first). */
+/* Lets keyboard/screen-reader users jump past the site nav straight to the
+   page content — hidden off-screen until it receives keyboard focus
+   (tabbing from the top of the page lands on it first). */
 .skip-link {
   position: absolute;
   left: -9999px;

@@ -12,7 +12,7 @@ export default async function HomePage() {
   const movies = await getNowShowingWithShowtimes();
 
   return (
-    <main>
+    <main id="main-content">
       <h1>Now Showing at RetfenyMozi</h1>
       {movies.length === 0 ? (
         <p className={styles.empty}>No movies are scheduled right now — check back soon.</p>
