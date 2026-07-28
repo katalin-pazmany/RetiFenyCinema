@@ -256,7 +256,9 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
       <ul className={styles.staticGrid}>
         {movies.map((movie) => (
           <li key={movie.id}>
-            <Link href={`/movies/${movie.id}`}>{movie.title}</Link>
+            <Link href={`/movies/${movie.id}`}>
+              <h2>{movie.title}</h2>
+            </Link>
           </li>
         ))}
       </ul>
