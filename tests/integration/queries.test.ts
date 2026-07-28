@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createDb } from '../../lib/db/client';
 import { movies, showtimes, bookings, bookingSeats } from '../../lib/db/schema';
-import { getNowShowing, getMovieById, getShowtimesForMovie, getAllShowtimes } from '../../lib/db/queries';
+import { getNowShowing, getMovieById, getShowtimesForMovie, getAllShowtimes, getNowShowingWithShowtimes } from '../../lib/db/queries';
 
 const db = createDb(process.env.TEST_DATABASE_URL!);
 
@@ -60,5 +60,51 @@ describe('movie and showtime queries', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].movie.title).toBe('Inception');
+  });
+
+  it('getNowShowingWithShowtimes returns movies ordered by title, each with its showtimes ordered by start time', async () => {
+    const [movieB] = await db
+      .insert(movies)
+      .values({
+        tmdbId: 900020,
+        imdbId: 'tt9000020',
+        title: 'B Movie',
+        synopsis: 'Fixture.',
+        posterUrl: null,
+        runtime: 90,
+        director: null,
+        actors: [],
+        imdbRating: null,
+        trailerUrl: null,
+      })
+      .returning();
+    const [movieA] = await db
+      .insert(movies)
+      .values({
+        tmdbId: 900021,
+        imdbId: 'tt9000021',
+        title: 'A Movie',
+        synopsis: 'Fixture.',
+        posterUrl: null,
+        runtime: 90,
+        director: null,
+        actors: [],
+        imdbRating: null,
+        trailerUrl: null,
+      })
+      .returning();
+
+    const later = new Date('2026-08-01T20:00:00Z');
+    const earlier = new Date('2026-08-01T18:00:00Z');
+    await db.insert(showtimes).values([
+      { movieId: movieA.id, startTime: later },
+      { movieId: movieA.id, startTime: earlier },
+    ]);
+
+    const result = await getNowShowingWithShowtimes(db);
+
+    expect(result.map((m) => m.title)).toEqual(['A Movie', 'B Movie']);
+    expect(result[0].showtimes.map((s) => s.startTime)).toEqual([earlier, later]);
+    expect(result[1].showtimes).toEqual([]);
   });
 });

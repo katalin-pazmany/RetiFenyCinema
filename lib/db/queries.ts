@@ -56,6 +56,24 @@ export async function getNowShowing(db: Database = defaultDb): Promise<Movie[]> 
   return rows.map(rowToMovie);
 }
 
+export async function getNowShowingWithShowtimes(db: Database = defaultDb): Promise<Array<Movie & { showtimes: Showtime[] }>> {
+  const movieRows = await db.select().from(movies).orderBy(movies.title);
+  const showtimeRows = await db.select().from(showtimes).orderBy(showtimes.startTime);
+
+  const showtimesByMovieId = new Map<number, Showtime[]>();
+  for (const row of showtimeRows) {
+    const showtime = rowToShowtime(row);
+    const existing = showtimesByMovieId.get(showtime.movieId) ?? [];
+    existing.push(showtime);
+    showtimesByMovieId.set(showtime.movieId, existing);
+  }
+
+  return movieRows.map((row) => ({
+    ...rowToMovie(row),
+    showtimes: showtimesByMovieId.get(row.id) ?? [],
+  }));
+}
+
 export async function getMovieById(id: number, db: Database = defaultDb): Promise<Movie | null> {
   const rows = await db.select().from(movies).where(eq(movies.id, id)).limit(1);
   return rows[0] ? rowToMovie(rows[0]) : null;
