@@ -20,7 +20,16 @@ declare global {
     ) => {
       init: (
         uid: string,
-        options: { success: (api: SketchfabViewerApi) => void; error: () => void },
+        options: {
+          success: (api: SketchfabViewerApi) => void;
+          error: () => void;
+          // Standard Sketchfab embed parameters, also accepted by the JS
+          // Viewer API's init() options (mirrors the query-string params
+          // documented for plain iframe embeds). Not exhaustive — add more
+          // as needed.
+          ui_theme?: 'dark';
+          ui_hint?: 0 | 1 | 2;
+        },
       ) => void;
     };
   }

@@ -158,6 +158,14 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
     let cancelled = false;
     const client = new window.Sketchfab(SKETCHFAB_VIEWER_VERSION, iframeRef.current);
     client.init(SKETCHFAB_MODEL_UID, {
+      // ui_theme: dark backdrop instead of Sketchfab's default white, to
+      // match the auditorium's dark background while the model loads.
+      // ui_hint: 0 always suppresses the "click and hold to look around"
+      // hint — showing it would be actively misleading here, since the
+      // camera is deliberately scroll-driven only (see .sketchfabFrame's
+      // pointer-events: none) and dragging genuinely does nothing.
+      ui_theme: 'dark',
+      ui_hint: 0,
       success: (api) => {
         if (cancelled) {
           return;
