@@ -84,3 +84,14 @@
   background: var(--color-accent);
   filter: brightness(0.85);
 }
+
+@media (max-width: 480px) {
+  .card {
+    flex-direction: column;
+  }
+
+  .poster {
+    width: 100%;
+    max-width: 160px;
+  }
+}
