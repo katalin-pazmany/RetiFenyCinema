@@ -142,19 +142,39 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
       return;
     }
 
+    // Guards every async callback below so that on unmount (or React Strict
+    // Mode's dev-only double-invoke of effects) a stale success/viewerready/
+    // getCameraLookAt callback from a torn-down client can't write into refs
+    // or race a second client.init() against the same iframe.
+    let cancelled = false;
     const client = new window.Sketchfab(SKETCHFAB_VIEWER_VERSION, iframeRef.current);
     client.init(SKETCHFAB_MODEL_UID, {
       success: (api) => {
+        if (cancelled) {
+          return;
+        }
         sketchfabApiRef.current = api;
         api.start();
         api.addEventListener('viewerready', () => {
+          if (cancelled) {
+            return;
+          }
           api.getCameraLookAt((err, camera) => {
+            if (cancelled) {
+              return;
+            }
             if (err) {
               setSketchfabFailed(true);
               return;
             }
             const seatsView: CameraPose = { eye: camera.position, target: camera.target };
             seatsViewRef.current = seatsView;
+            // Catch up: if the visitor already scrolled through act one
+            // while the model was still loading, onUpdate has been no-oping
+            // (updateCameraPhase early-returns without a seats view) —
+            // force GSAP to recompute and re-fire onUpdate for the current
+            // scroll position now that the seats view is finally known.
+            ScrollTrigger.update();
 
             if (prefersReducedMotionRef.current) {
               const screenView = addCameraOffset(seatsView, SCREEN_VIEW_OFFSET);
@@ -163,8 +183,19 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
           });
         });
       },
-      error: () => setSketchfabFailed(true),
+      error: () => {
+        if (!cancelled) {
+          setSketchfabFailed(true);
+        }
+      },
     });
+
+    return () => {
+      cancelled = true;
+      sketchfabApiRef.current = null;
+      seatsViewRef.current = null;
+      settledAtScreenRef.current = false;
+    };
     // prefersReducedMotion is read via prefersReducedMotionRef (see above)
     // specifically so this effect does not depend on it — see that ref's
     // comment for why.
