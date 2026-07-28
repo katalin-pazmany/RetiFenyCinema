@@ -219,7 +219,12 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
       <Script
         src={SKETCHFAB_VIEWER_SRC}
         strategy="afterInteractive"
-        onLoad={() => setScriptLoaded(true)}
+        // onReady (not onLoad): next/script caches remote scripts by src at
+        // the module level, so onLoad only ever fires once, ever — a later
+        // mount of this same <Script> (e.g. navigating away from `/` and
+        // back) would silently never call it again. onReady fires on every
+        // mount once the script has loaded, including cache hits.
+        onReady={() => setScriptLoaded(true)}
         onError={() => setSketchfabFailed(true)}
       />
       <iframe
