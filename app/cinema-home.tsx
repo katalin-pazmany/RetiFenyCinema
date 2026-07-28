@@ -117,6 +117,15 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
   const prefersReducedMotionRef = useRef(prefersReducedMotion);
   useEffect(() => {
     prefersReducedMotionRef.current = prefersReducedMotion;
+    // If the OS-level preference flips to "reduced" mid-session (not just
+    // on load), snap the camera straight to the tuned screen-facing pose
+    // rather than leaving it wherever the scroll-driven rotation last left
+    // it — the ScrollTrigger effect's cleanup only kills the trigger, it
+    // doesn't reposition the camera.
+    if (prefersReducedMotion && sketchfabApiRef.current && seatsViewRef.current) {
+      const screenView = addCameraOffset(seatsViewRef.current, SCREEN_VIEW_OFFSET);
+      sketchfabApiRef.current.setCameraLookAt(screenView.eye, screenView.target, CAMERA_MOVE_DURATION_S);
+    }
   }, [prefersReducedMotion]);
 
   const sceneRef = useRef<HTMLDivElement | null>(null);
@@ -305,8 +314,8 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
 
   if (movies.length === 0) {
     return (
-      <main className={styles.main}>
-        <h1>RetfenyMozi</h1>
+      <main id="main-content" className={styles.main}>
+        <h1>Now Showing at RetfenyMozi</h1>
         <p className={styles.empty}>No movies are scheduled right now — check back soon.</p>
       </main>
     );
@@ -318,7 +327,7 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
   // attribution, error fallback) renders either way.
   const auditorium = sketchfabFailed ? (
     <div className={styles.sketchfabFallback}>
-      <h1 className={styles.title}>RetfenyMozi</h1>
+      <h1 className={styles.title}>Now Showing at RetfenyMozi</h1>
     </div>
   ) : (
     <>
@@ -338,8 +347,13 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
         title="RetfenyMozi auditorium"
         className={styles.sketchfabFrame}
         allow="autoplay; fullscreen; xr-spatial-tracking"
+        // Purely decorative — the camera is scroll-driven only, and
+        // pointer-events: none already blocks interaction. Keep it out of
+        // the tab order and hidden from screen readers.
+        aria-hidden="true"
+        tabIndex={-1}
       />
-      <h1 className={styles.title}>RetfenyMozi</h1>
+      <h1 className={styles.title}>Now Showing at RetfenyMozi</h1>
       <p className={styles.attribution}>
         <a
           href="https://sketchfab.com/3d-models/vr-cinema-d680d16468f44cc1aefa90d0d996a26f"
@@ -375,7 +389,7 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
   );
 
   return (
-    <main className={styles.main}>
+    <main id="main-content" className={styles.main}>
       <div className={styles.scene} ref={sceneRef}>
         <div className={styles.auditorium} ref={pinRef}>
           {auditorium}

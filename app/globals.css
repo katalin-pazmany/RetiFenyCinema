@@ -76,6 +76,26 @@ main {
   margin: 0 auto;
 }
 
+/* Bypasses the pinned scroll-scrub section on the homepage entirely for
+   keyboard/screen-reader users — hidden off-screen until it receives
+   keyboard focus (tabbing from the top of the page lands on it first). */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-bg);
+  color: var(--color-fg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+.skip-link:focus {
+  left: var(--space-sm);
+  top: var(--space-sm);
+}
+
 .site-nav {
   display: flex;
   align-items: center;

@@ -35,6 +35,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable}`}
     >
       <body>
+        <a href="#main-content" className="skip-link">
+          Skip to content
+        </a>
         <nav className="site-nav">
           <Link href="/" className="wordmark">
             RetfenyMozi
