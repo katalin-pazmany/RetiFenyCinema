@@ -166,6 +166,12 @@ export function CinemaHome({ movies }: { movies: Movie[] }) {
       // pointer-events: none) and dragging genuinely does nothing.
       ui_theme: 'dark',
       ui_hint: 0,
+      // ui_animations: 0 disables Sketchfab's own built-in fly-in/zoom
+      // entrance animation on load — we want the visitor already in the
+      // room on first paint, with the only camera motion being our own
+      // scroll-driven turn toward the screen, not a separate intro that
+      // plays (and can still be finishing) before/while that starts.
+      ui_animations: 0,
       success: (api) => {
         if (cancelled) {
           return;

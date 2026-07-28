@@ -29,6 +29,7 @@ declare global {
           // as needed.
           ui_theme?: 'dark';
           ui_hint?: 0 | 1 | 2;
+          ui_animations?: 0 | 1;
         },
       ) => void;
     };
