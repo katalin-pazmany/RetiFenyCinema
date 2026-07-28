@@ -32,14 +32,15 @@
 
 .title {
   margin-bottom: var(--space-xs);
+  overflow-wrap: anywhere;
 }
 
 .title a {
-  color: var(--color-fg);
+  color: var(--color-accent-text);
 }
 
 .title a:hover {
-  color: var(--color-accent-text);
+  text-decoration: underline;
 }
 
 .ratingBadge {

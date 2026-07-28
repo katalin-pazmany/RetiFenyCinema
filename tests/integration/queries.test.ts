@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createDb } from '../../lib/db/client';
 import { movies, showtimes, bookings, bookingSeats } from '../../lib/db/schema';
-import { getNowShowing, getMovieById, getShowtimesForMovie, getAllShowtimes, getNowShowingWithShowtimes } from '../../lib/db/queries';
+import { getMovieById, getShowtimesForMovie, getAllShowtimes, getNowShowingWithShowtimes } from '../../lib/db/queries';
 
 const db = createDb(process.env.TEST_DATABASE_URL!);
 
@@ -24,15 +24,6 @@ describe('movie and showtime queries', () => {
     await db.delete(bookings);
     await db.delete(showtimes);
     await db.delete(movies);
-  });
-
-  it('getNowShowing returns all movies', async () => {
-    await db.insert(movies).values(movieFixture);
-
-    const result = await getNowShowing(db);
-
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({ title: 'Inception', imdbRating: 8.8, actors: ['Leonardo DiCaprio', 'Tom Hardy'] });
   });
 
   it('getMovieById returns null for a missing id', async () => {
@@ -62,22 +53,25 @@ describe('movie and showtime queries', () => {
     expect(result[0].movie.title).toBe('Inception');
   });
 
+  it('getNowShowingWithShowtimes returns [] when there are no movies', async () => {
+    const result = await getNowShowingWithShowtimes(db);
+
+    expect(result).toEqual([]);
+  });
+
   it('getNowShowingWithShowtimes returns movies ordered by title, each with its showtimes ordered by start time', async () => {
-    const [movieB] = await db
-      .insert(movies)
-      .values({
-        tmdbId: 900020,
-        imdbId: 'tt9000020',
-        title: 'B Movie',
-        synopsis: 'Fixture.',
-        posterUrl: null,
-        runtime: 90,
-        director: null,
-        actors: [],
-        imdbRating: null,
-        trailerUrl: null,
-      })
-      .returning();
+    await db.insert(movies).values({
+      tmdbId: 900020,
+      imdbId: 'tt9000020',
+      title: 'B Movie',
+      synopsis: 'Fixture.',
+      posterUrl: null,
+      runtime: 90,
+      director: null,
+      actors: [],
+      imdbRating: null,
+      trailerUrl: null,
+    });
     const [movieA] = await db
       .insert(movies)
       .values({

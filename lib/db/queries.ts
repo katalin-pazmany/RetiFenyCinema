@@ -51,11 +51,6 @@ function rowToBooking(row: typeof bookings.$inferSelect): Booking {
   };
 }
 
-export async function getNowShowing(db: Database = defaultDb): Promise<Movie[]> {
-  const rows = await db.select().from(movies).orderBy(movies.title);
-  return rows.map(rowToMovie);
-}
-
 export async function getNowShowingWithShowtimes(db: Database = defaultDb): Promise<Array<Movie & { showtimes: Showtime[] }>> {
   const movieRows = await db.select().from(movies).orderBy(movies.title);
   const showtimeRows = await db.select().from(showtimes).orderBy(showtimes.startTime);

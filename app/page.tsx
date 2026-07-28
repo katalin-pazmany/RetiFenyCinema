@@ -21,11 +21,19 @@ export default async function HomePage() {
           {movies.map((movie) => (
             <li key={movie.id} className={styles.card}>
               {movie.posterUrl ? (
-                <img src={movie.posterUrl} alt={`${movie.title} poster`} className={styles.poster} />
+                <img
+                  src={movie.posterUrl}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className={styles.poster}
+                />
               ) : (
                 <img
                   src="/placeholder-poster.svg"
-                  alt={`${movie.title} poster placeholder`}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
                   className={styles.poster}
                 />
               )}
